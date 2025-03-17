@@ -2,7 +2,10 @@ import numpy as np
 
 
 def main():
-    filepath = "toymodel_output/model_params.npz"
+    """
+    Load the equilibrium parameters and print them
+    """
+    filepath = "toymodel_output/benchmark/equilibrium.npz"
     try:
         data = np.load(filepath)
         print("Loaded parameters:")

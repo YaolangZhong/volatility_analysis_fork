@@ -10,6 +10,33 @@ from equations import (
 )
 
 
+def solve_price_and_cost(
+    w_hat,
+    Pm_hat_init,
+    mp: ModelParams,
+    shocks: ModelShocks,
+    max_iter=1000,
+    tol=1e-6,
+    mute=True,
+):
+    """
+    Solve for the price index changes of intermediate goods
+    """
+    Pm_hat = Pm_hat_init.copy()
+    for i in range(max_iter):
+        c_hat = calc_c_hat(w_hat, Pm_hat, mp)
+        Pm_hat_new = calc_Pu_hat(c_hat, "m", mp, shocks)
+        diff = np.max(np.abs(Pm_hat_new - Pm_hat))
+        if diff < tol:
+            if not mute:
+                print(f"Pm_hat converged in {i+1} iterations")
+            c_hat = calc_c_hat(w_hat, Pm_hat_new, mp)
+            break
+        Pm_hat = Pm_hat_new
+
+    return c_hat, Pm_hat
+
+
 def solve_X_prime(
     w_hat,
     pif_hat,
@@ -72,8 +99,8 @@ def solve_equilibrium(
     Xf_init: np.ndarray,
     Xm_init: np.ndarray,
     vfactor=-0.2,
-    tol=1e-2,
-    max_iter=100,
+    tol=1e-3,
+    max_iter=1000,
     mute=True,
 ):
     """
@@ -98,6 +125,7 @@ def solve_equilibrium(
 
     # Initialize the variables
     N, J = mp.N, mp.J
+    VA = np.sum(mp.w0 * mp.L0)
 
     # Initlial guess for wage rate changes
     w_hat = np.ones(N)
@@ -112,9 +140,10 @@ def solve_equilibrium(
 
     for i in range(max_iter):
         # Calculate endogenous variables
-        c_hat = calc_c_hat(w_hat, Pm_hat, mp)
+        c_hat, Pm_hat = solve_price_and_cost(
+            w_hat, Pm_hat, mp, shocks, max_iter=1000, tol=1e-6, mute=True
+        )
         Pf_hat = calc_Pu_hat(c_hat, "f", mp, shocks)
-        Pm_hat = calc_Pu_hat(c_hat, "m", mp, shocks)
         pif_hat = calc_piu_hat(c_hat, Pf_hat, "f", mp, shocks)
         pim_hat = calc_piu_hat(c_hat, Pm_hat, "m", mp, shocks)
         Xf_prime, Xm_prime = solve_X_prime(
@@ -140,12 +169,13 @@ def solve_equilibrium(
         # between the calculated trade deficit and the target trade deficit
         # normalized by the initial value added
 
-        ZW2 = (td_prime - mp.td) / (mp.w0 * mp.L0)
-        print(f"ZW2: {ZW2}")
+        VA_prime = np.sum(mp.w0 * mp.L0 * w_hat)
+
+        ZW2 = td_prime / VA_prime - mp.td / VA
 
         # Update the wage changes (numeraire country is excluded)
         w_hat_new = np.ones(N)
-        w_hat_new = w_hat * (1 - vfactor * ZW2 / w_hat)
+        w_hat_new = w_hat * np.exp(-alpha * ZW2)
 
         # w_hat_new = np.clip(w_hat_new, 1e-3, 1e3)
 
@@ -154,7 +184,6 @@ def solve_equilibrium(
 
         # Update wage changes for the next iteration
         w_hat = w_hat_new / w_hat_new[numeraire_index]
-        print(f"w_hat for iteration {i+1}: {w_hat}")
 
         min_Xf_prime = np.min(Xf_prime)
         max_Xf_prime = np.max(Xf_prime)
