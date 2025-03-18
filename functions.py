@@ -182,3 +182,172 @@ def generate_rand_params(N: int, J: int):
     else:
         print("Generated parameters are inconsistent.")
         return None
+
+
+def generate_symmetric_params(N: int, J: int):
+    """
+    Generate random parameters for the model.
+
+    ---------- Arguments ----------
+    N : int
+        Number of countries.
+    J : int
+        Number of sectors.
+
+    ---------- Returns ----------
+    model_params : ModelParams
+        An instance of ModelParams filled with the generated parameters.
+    """
+
+    alpha = np.ones((N, J)) + np.random.rand(N, J)  # 1 ~ 2
+    alpha = alpha / alpha.sum(axis=1, keepdims=True)
+
+    beta = np.ones((N, J)) * 2 + np.random.rand(N, J)  # 2 ~ 3
+    gamma = (
+        np.ones((N, J, J)) * 7 / J + np.random.rand(N, J, J) / J
+    )  # gamma_sum = 7 ~ 8
+
+    # Calculate beta and gamma so that they sum to 1
+    sum_gamma = gamma.sum(axis=1)
+    beta_gamma_sum = beta + sum_gamma
+
+    for n in range(N):
+        for j_ in range(J):
+            denom = beta_gamma_sum[n, j_]
+            if denom < 1e-15:
+                # if denom is too small, set beta=1 and gamma=0
+                beta[n, j_] = 1.0
+                gamma[n, :, j_] = 0.0
+            else:
+                # normalize beta and gamma
+                beta[n, j_] /= denom
+                gamma[n, :, j_] /= denom
+
+    theta = np.random.rand(J)
+    theta = theta * 4 + 6  # 6 ~ 10
+
+    pif = np.ones((N, N, J)) + np.random.rand(N, N, J)  # 1 ~ 2
+    pif_sum = pif.sum(axis=1, keepdims=True)
+    pif = pif / pif_sum
+
+    pim = np.ones((N, N, J)) + np.random.rand(N, N, J)  # 1 ~ 2
+    pim_sum = pim.sum(axis=1, keepdims=True)
+    pim = pim / pim_sum
+
+    tilde_tau = np.random.rand(N, N, J) + 1  # 1 ~ 2
+    for i in range(N):
+        tilde_tau[i, i, :] = 1
+
+    Xf = np.ones((N, J)) * 100 + np.random.rand(N, J) * 900  # 100 ~ 1000
+    Xm = np.ones((N, J)) * 100 + np.random.rand(N, J) * 900  # 100 ~ 1000
+    w0 = np.ones(N)  # 1
+    L0 = np.ones(N) * 100 + np.random.rand(N) * 900  # 100 ~ 1000
+
+    td = np.zeros(N)
+
+    mp = ModelParams(
+        N=N,
+        J=J,
+        alpha=alpha,
+        beta=beta,
+        gamma=gamma,
+        theta=theta,
+        pif=pif,
+        pim=pim,
+        tilde_tau=tilde_tau,
+        Xf=Xf,
+        Xm=Xm,
+        w0=w0,
+        L0=L0,
+        td=td,
+    )
+
+    if mp.check_consistency():
+        return mp
+    else:
+        print("Generated parameters are inconsistent.")
+        return None
+
+
+def generate_rand_params_without_usage(N: int, J: int):
+    """
+    Generate random parameters for the model.
+    It generates the parameters without distinguishing between final and intermediate goods.
+
+    ---------- Arguments ----------
+    N : int
+        Number of countries.
+    J : int
+        Number of sectors.
+
+    ---------- Returns ----------
+    model_params : ModelParams
+        An instance of ModelParams filled with the generated parameters.
+    """
+
+    alpha = np.ones((N, J)) + np.random.rand(N, J)  # 1 ~ 2
+    alpha = alpha / alpha.sum(axis=1, keepdims=True)
+
+    beta = np.ones((N, J)) * 2 + np.random.rand(N, J)  # 2 ~ 3
+    gamma = (
+        np.ones((N, J, J)) * 7 / J + np.random.rand(N, J, J) / J
+    )  # gamma_sum = 7 ~ 8
+
+    # Calculate beta and gamma so that they sum to 1
+    sum_gamma = gamma.sum(axis=1)
+    beta_gamma_sum = beta + sum_gamma
+
+    for n in range(N):
+        for j_ in range(J):
+            denom = beta_gamma_sum[n, j_]
+            if denom < 1e-15:
+                # if denom is too small, set beta=1 and gamma=0
+                beta[n, j_] = 1.0
+                gamma[n, :, j_] = 0.0
+            else:
+                # normalize beta and gamma
+                beta[n, j_] /= denom
+                gamma[n, :, j_] /= denom
+
+    theta = np.random.rand(J)
+    theta = theta * 4 + 6  # 6 ~ 10
+
+    pi = np.ones((N, N, J)) + np.random.rand(N, N, J)  # 1 ~ 2
+    pi_sum = pi.sum(axis=1, keepdims=True)
+    pi = pi / pi_sum
+
+    pif, pim = pi, pi
+
+    tilde_tau = np.random.rand(N, N, J) + 1  # 1 ~ 2
+    for i in range(N):
+        tilde_tau[i, i, :] = 1
+
+    Xf = np.ones((N, J)) * 100 + np.random.rand(N, J) * 900  # 100 ~ 1000
+    Xm = np.ones((N, J)) * 100 + np.random.rand(N, J) * 900  # 100 ~ 1000
+    w0 = np.ones(N)  # 1
+    L0 = np.ones(N) * 100 + np.random.rand(N) * 900  # 100 ~ 1000
+
+    td = np.zeros(N)
+
+    mp = ModelParams(
+        N=N,
+        J=J,
+        alpha=alpha,
+        beta=beta,
+        gamma=gamma,
+        theta=theta,
+        pif=pif,
+        pim=pim,
+        tilde_tau=tilde_tau,
+        Xf=Xf,
+        Xm=Xm,
+        w0=w0,
+        L0=L0,
+        td=td,
+    )
+
+    if mp.check_consistency():
+        return mp
+    else:
+        print("Generated parameters are inconsistent.")
+        return None
