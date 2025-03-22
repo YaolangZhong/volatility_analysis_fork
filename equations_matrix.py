@@ -28,6 +28,7 @@ def calc_X(
     """
 
     N, J = mp.alpha.shape
+
     def calc_A():
         # Af is the [alpha x (w_hat x w0 x L0 + TD)], alpha is of shape (N, J) and all terms in the parathesis is of shape (N, )
         # Am is simply zero of shape (N, J)
@@ -42,7 +43,6 @@ def calc_X(
         return A
     
     def calc_B():
-        from scipy.linalg import block_diag
         # --- Compute Bff  ---
         """
         - sum_i^N {tau/(1+tau) * pif} is irrelavant to X so we first calculate this term and call the resulting matrix U, 
@@ -145,6 +145,6 @@ def calc_X(
     #     Xm_vec[:, j] = X_vec_j[N:]
 
     # Reshape the vectors back to (N, J)
-    Xf = Xf_vec.reshape(mp.alpha.shape)  # Final goods, shape: (N, J)
-    Xm = Xm_vec.reshape(mp.alpha.shape)  # Intermediate goods, shape: (N, J)
+    Xf = Xf_vec.reshape(N, J)  # Final goods, shape: (N, J)
+    Xm = Xm_vec.reshape(N, J)  # Intermediate goods, shape: (N, J)
     return Xf, Xm
