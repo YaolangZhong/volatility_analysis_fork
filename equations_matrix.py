@@ -1,13 +1,10 @@
 import numpy as np
-from scipy.linalg import block_diag
 from models import ModelParams, ModelShocks, Usage
 
 def calc_X(
     w_hat,
     pif_hat,
     pim_hat,
-    Xf_prime,
-    Xm_prime,
     td_prime,
     mp: ModelParams,
     shocks: ModelShocks,
@@ -15,115 +12,137 @@ def calc_X(
     """
     X = A + B X
     where 
-        X = [Xf; Xm]
+        X = [vec(Xf); vec(Xm)]
         A = [Af; Am]
         B = [Bff  Bfm]
             [Bmf  Bmm]
     
     In the vectorized system:
-    - Xf and Xm are originally (N, J) matrices, and when vectorized they become vectors of length N*J.
-    - Therefore, X = [vec(Xf); vec(Xm)] is a vector of shape (2*N*J, ).
+    - Xf and Xm are originally (N, J) matrices, and when vectorized, the reshape(-1) function by default using the "C-order" 
+        and they become vectors of length N*J in the order [X_11, ..., X_1J,..., X_N1,...,X_NJ].
+        Therefore, X = [vec(Xf); vec(Xm)] is a vector of shape (2*N*J, ).
     - A is defined similarly: A = [vec(Af); vec(Am)], with Af and Am each of shape (N, J),
       so A has shape (2*N*J, ).
-    - The B blocks (Bff, Bfm, Bmf, Bmm) are first computed as 3D arrays of shape (N, N, J)
-      (with the two country dimensions and one sector dimension). These are then converted (vectorized)
-      into 2D matrices of shape (N*J, N*J) (typically as block diagonal matrices if sectors are independent).
-    - The full B matrix is assembled as a 2x2 block matrix of shape (2*N*J, 2*N*J).
+    - The B blocks (Bff, Bfm, Bmf, Bmm) each is of the shape (N*J, N*J) constructed as below
+
     """
 
+    N, J = mp.alpha.shape
     def calc_A():
-        # Wage component: for each country, shape (N,)
-        wage_component = w_hat * mp.w0 * mp.L0
-        # Exogenous expenditure: wage component plus total demand shock, shape (N,)
-        expenditure_exo = wage_component + td_prime
-        # Af: final goods exogenous component: (N, J)
-        Af = mp.alpha * expenditure_exo[:, np.newaxis]
-        # Am: intermediate goods exogenous component is assumed zero: (N, J)
+        # Af is the [alpha x (w_hat x w0 x L0 + TD)], alpha is of shape (N, J) and all terms in the parathesis is of shape (N, )
+        # Am is simply zero of shape (N, J)
+        Af = mp.alpha * (w_hat * mp.w0 * mp.L0 + td_prime)[:, np.newaxis]
+        # Intermediate goods exogenous component (Am) is zero: (N, J)
         Am = np.zeros_like(Af)
-        # Vectorize each (reshape to a vector of length N*J)
-        Af_vec = Af.reshape(-1)  # shape: (N*J,)
-        Am_vec = Am.reshape(-1)  # shape: (N*J,)
-        # Stack Af and Am vertically to get A of shape (2*N*J,)
+        # Vectorize to get vectors of length N*J
+        Af_vec = Af.reshape(-1)  # (N*J,)
+        Am_vec = Am.reshape(-1)  # (N*J,)
+        # Stack vertically to form A of shape (2*N*J,)
         A = np.concatenate([Af_vec, Am_vec])
         return A
-
+    
     def calc_B():
-        # --- Compute Bff ---
-        # pif_hat has shape (N, N, J) and mp.pif is broadcastable to (N, N, J)
-        pif_prime = pif_hat * mp.pif  # shape: (N, N, J)
-        # Tariff factor: (tilde_tau_prime - 1) / tilde_tau_prime, shape: (N, N, J)
+        from scipy.linalg import block_diag
+        # --- Compute Bff  ---
+        """
+        - sum_i^N {tau/(1+tau) * pif} is irrelavant to X so we first calculate this term and call the resulting matrix U, 
+        which is of the shape (N, J). 
+        - Similarly, sum_i^N {tau/(1+tau) * pim} for the case of Bfm
+        - we also call mp.alpha the vector V for short
+        - the vectorization of U and V is called u and v respectively
+        - similarly, the vectorization of Xff is called x
+        """
         factorff = (shocks.tilde_tau_prime - 1) / shocks.tilde_tau_prime
-        # Compute Bff in its natural 3D form:
-        # mp.alpha is (N, J). To multiply with (N, N, J), we add a new axis for the exporter dimension.
-        # The result is a 3D array of shape (N, N, J)
-        Bff_3D = mp.alpha[:, None, :] * factorff * pif_prime  # shape: (N, N, J)
-        # Now, for each sector (the third dimension), extract the (N, N) matrix and form a block-diagonal matrix.
-        # This will convert the 3D array into a 2D matrix of shape (N*J, N*J).
-        blocks = [Bff_3D[:, :, j] for j in range(Bff_3D.shape[2])]
-        from scipy.linalg import block_diag
-        Bff = block_diag(*blocks)  # shape: (N*J, N*J)
+        pif_prime = pif_hat * mp.pif
+        U = np.sum(factorff * pif_prime, axis=1)   # shape (N, J)
+        V = mp.alpha                               # shape (N, J)
+        u, v = U.reshape(-1), V.reshape(-1)        # shape (NJ, )
+        """
+        - consider S = sum_j^J Unj*Xnj, which has shape (N, )
+        - the elementwise product Unj*Xnj is computed by Du @ x where Du (NJxNJ) is the diagonalization of u
+        - the sum over index j is achieve by a matrix R which is the Kronecker product of diag(N) and ones(1xJ)
+        - hence S = R @ Du @ x
+        """
+        Du = np.diag(u)
+        R = np.kron(np.eye(N), np.ones((1, J)))
+        """
+        - next, consider replicating S by J times, by a matrix P which is the Kronecker product of diag(N) and ones(Jx1)
+        - the resulting PS is of shape (NJ, )
+        - we then calculate the elementwise product of V and PS by Dv @ PS where Dv (NJxNJ) is the diagonalization of v
+        """
+        P = np.kron(np.eye(N), np.ones((J, 1)))
+        Dv = np.diag(v)
+        Bff = Dv @ P @ R @ Du
 
+        # --- Compute Bfm  ---
+        # only U (and therefore u and Du) is re-calculated
+        pim_prime = pim_hat * mp.pim
+        U = np.sum(factorff * pim_prime, axis=1)   # shape (N, J)
+        u = U.reshape(-1)
+        Du = np.diag(u)
+        Bfm = Dv @ P @ R @ Du
+            
 
-        # --- Compute Bfm ---
-        # pif_prime already computed for Bff; now compute pim_prime for final goods equation:
-        pim_prime = pim_hat * mp.pim  # shape: (N, N, J)
-        # Use the same tariff factor as in Bff:
-        factorff = (shocks.tilde_tau_prime - 1) / shocks.tilde_tau_prime  # shape: (N, N, J)
-        # Compute the 3D array for Bfm (final goods equation, intermediate goods part)
-        Bfm_3D = mp.alpha[:, None, :] * factorff * pim_prime  # shape: (N, N, J)
-        # Convert to a 2D block-diagonal matrix (each block is an (N, N) matrix per sector)
-        blocks_Bfm = [Bfm_3D[:, :, j] for j in range(Bfm_3D.shape[2])]
-        from scipy.linalg import block_diag
-        Bfm = block_diag(*blocks_Bfm)  # shape: (N*J, N*J)
+        # --- Compute Bmf  ---
+        """
+        - let us call pif/(1+tau) the U matrix for short, and call mp.gamma the V matrix, the result matrix Z
+        - the index is then X(i,k), U(i,n,k), V(n,k,s), Z(n,s) such that 
+        - Z(n,s) = sum_k sum_i V(n,k,s)*U(i,n,k)*X(i,k)
+        - let x=vec(X) and z=vec(Z) such that X(i,k) corresponds to the index(i-1)J+k and Z(n,s) corresponds to the index(n-1)J+s
+        - then we have z((n-1)J+s) = sum_k sum_i B(n,s)(i,k)*x((i-1)J+k) 
+        - with the matrix form z = B x
+        where we first have a 4-D tensor B(n,s,i,k) = V(n,k,s)*U(i,n,k)
+        and then reshape into (NJ, NJ)
+        """
+        U = pif_prime / shocks.tilde_tau_prime
+        V = mp.gamma
+        B = np.einsum('nks,ink->nsik', V, U)
+        Bmf = B.reshape((N*J, N*J))
 
-        # --- Compute Bmf ---
-        # For the intermediate goods equation, the roles of importer and exporter reverse.
-        # Compute pif_prime for intermediate goods:
-        pif_prime = pif_hat * mp.pif  # shape: (N, N, J)
-        # Swap the importer and exporter indices to get pif_prime(i, n, j)
-        pif_prime_trans = pif_prime.transpose(1, 0, 2)  # shape: (N, N, J)
-        # For the intermediate equation, the tariff factor is 1/tilde_tau_prime, with swapped indices:
-        factor_m = 1 / shocks.tilde_tau_prime.transpose(1, 0, 2)  # shape: (N, N, J)
-        # Compute the 3D array for Bmf:
-        Bmf_3D = mp.beta[:, None, :] * (pif_prime_trans * factor_m)  # shape: (N, N, J)
-        # Convert to a 2D block-diagonal matrix:
-        blocks_Bmf = [Bmf_3D[:, :, j] for j in range(Bmf_3D.shape[2])]
-        Bmf = block_diag(*blocks_Bmf)  # shape: (N*J, N*J)
-
-        # --- Compute Bmm ---
-        # Compute pim_prime for intermediate goods (reuse pim_prime from above)
-        # Swap importer and exporter indices to get pim_prime(i, n, j)
-        pim_prime_trans = pim_prime.transpose(1, 0, 2)  # shape: (N, N, J)
-        # Use the same swapped tariff factor: 1/tilde_tau_prime with swapped indices
-        factor_m = 1 / shocks.tilde_tau_prime.transpose(1, 0, 2)  # shape: (N, N, J)
-        # Compute the 3D array for Bmm:
-        Bmm_3D = mp.beta[:, None, :] * (pim_prime_trans * factor_m)  # shape: (N, N, J)
-        # Convert to a 2D block-diagonal matrix:
-        blocks_Bmm = [Bmm_3D[:, :, j] for j in range(Bmm_3D.shape[2])]
-        Bmm = block_diag(*blocks_Bmm)  # shape: (N*J, N*J)
-        
-        # Concatenate the blocks to form the full B matrix.
-        # Bff_2D, B_fm_2D, B_mf_2D, B_mm_2D are all of shape (N*J, N*J)
-
-        # Concatenate horizontally to form the top and bottom rows:
-        B_top = np.hstack((Bff, Bfm))   # shape: (N*J, 2*N*J)
-        B_bottom = np.hstack((Bmf, Bmm))  # shape: (N*J, 2*N*J)
-
-        # Now vertically stack them to get the full B matrix:
-        B = np.vstack((B_top, B_bottom))         # shape: (2*N*J, 2*N*J)
+        # --- Compute Bmf  ---
+        U = pim_prime / shocks.tilde_tau_prime
+        V = mp.gamma
+        B = np.einsum('nks,ink->nsik', V, U)
+        Bmm = B.reshape((N*J, N*J))
+            
+        # --- Assemble full B ---
+        # Each of Bff, Bfm, Bmf, Bmm has shape (N*J, N*J)
+        # Assemble into a 2×2 block matrix:
+        B_top = np.hstack((Bff, Bfm))      # shape: (N*J, 2*N*J)
+        B_bottom = np.hstack((Bmf, Bmm))     # shape: (N*J, 2*N*J)
+        B = np.vstack((B_top, B_bottom))   # shape: (2*N*J, 2*N*J)
         return B
     
+    I = np.eye(2*N*J)
     A_vec = calc_A()
     B_vec = calc_B()
-    N, J = mp.alpha.shape
-    I = np.eye(2*N*J)
-
     # Solve the linear system: (I - B_vec) * X_vec = A_vec
     X_vec = np.linalg.solve(I - B_vec, A_vec)  # X_vec will have shape (2*N*J,)
-
     # Now, extract Xf and Xm from X_vec. The first NJ elements correspond to Xf, and the rest to Xm
     Xf_vec = X_vec[:N*J]
     Xm_vec = X_vec[N*J:]
+
+    # Xf_vec, Xm_vec = np.zeros((N, J)), np.zeros((N, J))
+    # for j in range(J):
+    #     # Determine the indices for sector j.
+    #     indices_f = np.arange(j * N, (j + 1) * N)                 # indices for X_f of sector j (length: N)
+    #     indices_m = np.arange(N * J + j * N, N * J + (j + 1) * N)     # indices for X_m of sector j (length: N)
+    #     # Combine indices to form the full vector indices for sector j (length: 2N)
+    #     sector_indices = np.concatenate([indices_f, indices_m])
+        
+    #     # Extract the corresponding subvector of A (A_sector) and submatrix of B (B_sector)
+    #     A_vec_j = A_vec[sector_indices]                # shape: (2N,)
+    #     B_vec_j = B_vec[np.ix_(sector_indices, sector_indices)]  # shape: (2N, 2N)
+        
+    #     # Define the identity matrix for the sector, I_sector of shape (2N, 2N)
+    #     I_j = np.eye(2 * N)
+        
+    #     # Solve the smaller system: (I_sector - B_sector) * X_sector = A_sector
+    #     X_vec_j = np.linalg.solve(I_j - B_vec_j, A_vec_j)  # shape: (2N,)
+        
+    #     # The first N elements correspond to X_f and the next N elements correspond to X_m for sector j.
+    #     Xf_vec[:, j] = X_vec_j[:N]
+    #     Xm_vec[:, j] = X_vec_j[N:]
 
     # Reshape the vectors back to (N, J)
     Xf = Xf_vec.reshape(mp.alpha.shape)  # Final goods, shape: (N, J)
