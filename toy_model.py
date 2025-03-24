@@ -5,7 +5,11 @@ from models import ModelShocks, ModelSol
 from equations import calc_Pu_hat, calc_piu_hat
 from solvers import solve_price_and_cost, solve_X_prime
 from functions import generate_rand_params
-from optimization import objective_w_hat, objective_w_hat_reduced
+from optimization import (
+    reconstruct_w_hat,
+    objective_w_hat,
+    objective_w_hat_reduced,
+)
 from scipy.optimize import minimize
 
 
@@ -13,23 +17,6 @@ class EarlyStopException(Exception):
     """Optimization early stop signal."""
 
     pass
-
-
-def reconstruct_w_hat(x_reduced, numeraire_index, N):
-    """
-    Function to receive a vector x_reduced of length (N-1) and
-    and return a vector w_hat_full of length N.
-    The element of numeraire_index is always fixed to 1.0.
-    """
-    w_hat_full = np.zeros(N)
-    idx_red = 0
-    for i in range(N):
-        if i == numeraire_index:
-            w_hat_full[i] = 1.0  # Fix the numeraire country to 1
-        else:
-            w_hat_full[i] = x_reduced[idx_red]
-            idx_red += 1
-    return w_hat_full
 
 
 def callback_early_stop(

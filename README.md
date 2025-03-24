@@ -29,46 +29,46 @@ This file defines model's equations to calculate equlibrium.
 ### calc_c_hat
 Function to calculate unit cost change (equation (7) of the paper).
 
-$$
+```math
 \hat{c}_{i}^{s} = \hat{w}_{i}^{\beta_{i}^{s}} \prod_{k=1}^{s} \left( \hat{P}_{i}^{k,m} \right)^{\beta_{i}^{sk}} \tag{7}
-$$
+```
 
 ### calc_Pu_hat
 Function to calculate price index change (equation (8) of the paper).
 It requires "usage" as an input (usage = "f" for final goods, = "m" for intermediate inputs)
 
-$$
+```math
 \hat{P}_{n}^{s,u} = \left( \sum_{h=1}^{N} \pi_{nh0}^{s,u} \hat{\lambda}_{h}^{s} \left( \hat{c}_{h}^{s} \hat{d}_{nh}^{s,u} \right)^{- \theta^{s}} \right)^{- \frac{1}{\theta^{s}}} \tag{8}
-$$
+```
 
 ### calc_pi_hat
 Function to calculate expenditure share change (equation (9) of the paper).
 It requires "usage" as an input (usage = "f" for final goods, = "m" for intermediate inputs)
 
-$$
+```math
 \hat{\pi}_{ni}^{s,u} = \frac{\hat{\lambda}_{i}^{s} \left( \hat{c}_{h}^{s} \hat{d}_{nh}^{s, u} \right)^{- \theta^{s}}}{\left( \hat{P}_{n}^{s, u} \right)^{- \theta^{s}}} \tag{9}
-$$
+```
 
 ### calc_Xf_prime
 Function to calculate expenditure to the final goods (equation (10) of the paper).
 
-$$
+```math
 X_{n}^{s,f \prime} = \alpha_{n}^{s} \left[ \hat{w}_{n} w_{n0} L_{n0} + \sum_{s=1}^S \sum_{i=1}^N \frac{\tau_{ni}^{s \prime}}{1 + \tau_{ni}^{s \prime}} \left( \pi_{ni}^{s, f \prime} X_{n}^{s, f \prime} + \pi_{ni}^{s, m \prime} X_{n}^{s,m \prime} \right) + TD_{n}^{\prime} \right] \tag{10}
-$$
+```
 
 ### calc_Xm_prime
 Function to calculate expenditure to the intermediate inputs (equation (11) of the paper).
 
-$$
+```math
 X_{n}^{s, m \prime} = \sum_{k=1}^S \beta_{n}^{ks} \left( \sum_{i=1}^{N} \frac{\pi_{in}^{k, f \prime}}{1 + \tau_{in}^{k, f \prime}} X_{i}^{k, f \prime} + \sum_{i=1}^N \frac{\pi_{in}^{k, m \prime}}{1 + \tau_{in}^{k, m \prime}} X_{i}^{k, m \prime} \right) \tag{11}
-$$
+```
 
 ### calc_td_prime
 Function to calculate trade deficit after the shock (equation (12) of the paper).
 
-$$
+```math
 TD_{n}^{\prime} = \sum_{s=1}^S \sum_{i=1}^N \left( \underbrace{\frac{\pi_{ni}^{s, f \prime} X_{nt}^{s, f \prime} + \pi_{ni}^{s, m \prime} X_{nt}^{s, m \prime}}{1 + \tau_{ni}^{s \prime}}}_{\text{Import}} - \underbrace{\frac{\pi_{in}^{s, f \prime} X_{i}^{s, f \prime} + \pi_{in}^{s, m \prime} X_{i}^{s, m \prime}}{1 + \tau_{in}^{s \prime}}}_{\text{Export}} \right) \tag{12}
-$$
+```
 
 ## solvers.py
 This file contains some functions to solve the model using loops.
@@ -82,15 +82,15 @@ Function to solve $\{X_{n}^{s, f \prime}\}$ and $\{X_{n}^{s, m \prime}\}$. For a
 ### <span style="color: grey; ">solve_equilibrium</span>
 Function to solve the entire equilibrium using loops. It guesses $\{\hat{w}_n\}$ and calculate endogenous variables and the difference of world-GDP-normalized trade deficit
 
-$$
+```math
 ZW2_n = \frac{TD_{n}^{\prime}}{\sum_{i=1}^{N} \hat{w}_{n} w_{n0} L_{n0}} - \frac{TD_{n0}}{\sum_{i=1}^{N} w_{n0} L_{n0}}, \tag{R-1}
-$$
+```
 
 and updates the guess $\{\hat{w}_n\}$ by
 
-$$
+```math
 \hat{w}_{n}^{\text{new}} = \hat{w}_{n}^{\text{old}} \exp \left(-\frac{ZW2_n}{10} \right).
-$$
+```
 
 It doesn't work for some reason, and is no longer used.
 
