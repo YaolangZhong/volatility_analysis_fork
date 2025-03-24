@@ -17,15 +17,15 @@ class EarlyStopException(Exception):
 
 def reconstruct_w_hat(x_reduced, numeraire_index, N):
     """
-    長さ (N-1) のベクトル x_reduced を受け取り、
-    長さ N の w_hat_full を返す。
-    numeraire_index の要素は常に 1.0 に固定。
+    Function to receive a vector x_reduced of length (N-1) and
+    and return a vector w_hat_full of length N.
+    The element of numeraire_index is always fixed to 1.0.
     """
     w_hat_full = np.zeros(N)
     idx_red = 0
     for i in range(N):
         if i == numeraire_index:
-            w_hat_full[i] = 1.0  # numeraire 国を 1 に固定
+            w_hat_full[i] = 1.0  # Fix the numeraire country to 1
         else:
             w_hat_full[i] = x_reduced[idx_red]
             idx_red += 1
@@ -48,7 +48,8 @@ def callback_early_stop(
         )
 
 
-def main():
+# Old main function (no longer used)
+def main_old():
     # =========================================================================
     # Step 1. Setup and generate random parameters
     out_dir = "toymodel_output"
@@ -202,6 +203,7 @@ def main():
         print("Failed to build benchmark solution")
 
 
+# New main function (used in the current script)
 def main_two():
     # =========================================================================
     # Step 1. Setup and generate random parameters
@@ -242,17 +244,17 @@ def main_two():
     Xf_init = mp.Xf.copy()
     Xm_init = mp.Xm.copy()
 
-    # (A) 最適化の変数次元は N-1
+    # (A) Dimention of the optimization problem is N-1
     dim_reduced = N - 1
-    # 適当な初期値（すべて1）
+    # Initial guess for the reduced problem
     x0_guess = np.ones(dim_reduced)
 
-    # (B) コールバックで early stop したい場合の例
+    # (B) Example of early stop with callback
     best_x = [None]
     res = None
 
     def callback_func(xk):
-        """例: 残差がある閾値以下なら途中終了させる."""
+        """Callback function to check the objective value and stop the optimization."""
         val = objective_w_hat_reduced(
             xk, mp, shocks, Xf_init, Xm_init, numeraire_index
         )
@@ -264,7 +266,7 @@ def main_two():
             )
 
     try:
-        # (C) Nelder-Mead で (N-1) 次元の問題を最適化
+        # (C) Optimize w_hat by using Nelder-Mead method
         res = minimize(
             objective_w_hat_reduced,
             x0_guess,
@@ -276,20 +278,20 @@ def main_two():
     except EarlyStopException as e:
         print("Early stop triggered:", e)
 
-    # (D) 解の取り出し: res が None でなければ official な解
+    # (D) Extract the solution: res is the official solution
     if res is not None and hasattr(res, "x"):
         print("Optimization finished. Scipy result:")
         print(res)
         x_reduced_opt = res.x
     else:
-        # early stop, best_x[0] に記録
+        # If res is None, use the best solution so far
         x_reduced_opt = best_x[0]
 
-    # (E) 最終的な w_hat を復元（numeraire は自動的に1）
+    # (E) Reconstruct w_hat (numeraire is automatically set to 1)
     w_hat_opt = reconstruct_w_hat(x_reduced_opt, numeraire_index, N)
     print("Final wage changes (including numeraire=1):", w_hat_opt)
 
-    # (F) 均衡を計算
+    # (F) Calculate the equilibrium
     Pm_init = np.ones((N, J))
     c_hat, Pm_hat = solve_price_and_cost(
         w_hat_opt, Pm_init, mp, shocks, max_iter=1000, tol=1e-7, mute=True
@@ -311,7 +313,7 @@ def main_two():
         mute=True,
     )
 
-    # (G) 結果を保存
+    # (G) Save the results
     bench_sol = ModelSol(
         params=mp,
         shocks=shocks,

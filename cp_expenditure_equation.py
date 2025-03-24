@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def calc_X(w_hat, alpha, gamma, pi_prime, tilde_tau_prime, D, VA):
     N, J = alpha.shape
 
@@ -13,30 +14,26 @@ def calc_X(w_hat, alpha, gamma, pi_prime, tilde_tau_prime, D, VA):
         U_ff = np.sum(factorff * pi_prime, axis=1)
         u_ff = U_ff.ravel()
         Du_ff = np.diag(u_ff)
-        
+
         v = alpha.ravel()
         Dv = np.diag(v)
         R = np.kron(np.eye(N), np.ones((1, J)))
         P = np.kron(np.eye(N), np.ones((J, 1)))
-        
+
         Bff = Dv @ P @ R @ Du_ff
-        Bfm = Bff  
+        Bfm = Bff
 
         U_m = pi_prime / tilde_tau_prime
-        B = np.einsum('nks,ink->nsik', gamma, U_m).reshape(N*J, N*J)
-        Bmf = Bmm = B  
+        B = np.einsum("nks,ink->nsik", gamma, U_m).reshape(N * J, N * J)
+        Bmf = Bmm = B
 
-        return np.vstack([
-            np.hstack([Bff, Bfm]),
-            np.hstack([Bmf, Bmm])
-        ])
+        return np.vstack([np.hstack([Bff, Bfm]), np.hstack([Bmf, Bmm])])
 
     I = np.eye(2 * N * J)
     A = calc_A()
     B = calc_B()
-    
-    X_total = np.linalg.solve(I - B, A)
-    X = (X_total[:N*J] + X_total[N*J:]).reshape(N, J)
-    
-    return X
 
+    X_total = np.linalg.solve(I - B, A)
+    X = (X_total[: N * J] + X_total[N * J :]).reshape(N, J)
+
+    return X

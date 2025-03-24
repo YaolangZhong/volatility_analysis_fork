@@ -7,6 +7,7 @@ from equations import (
 )
 
 
+# Old objective function (no longer used)
 def objective_w_hat(w_hat, mp, shocks, Xf_init, Xm_init, numeraire_index=0):
     """
     Function to calculate the difference
@@ -76,13 +77,13 @@ def objective_w_hat_reduced(
     x_reduced, mp, shocks, Xf_init, Xm_init, numeraire_index
 ):
     """
-    numeraire 国を除いた (N-1) 次元の w_hat ベクトル (x_reduced) を受け取り、
-    フルサイズの w_hat を再構築 → (13) の残差（二乗）を返す。
+    Function to calculate the difference
+    between the model and data trade deficit and return its squared sum.
     """
-    # 1. numeraire 国を 1 に固定してフルベクトルに
+    # 1. reconstruct w_hat_full
     w_hat_full = reconstruct_w_hat(x_reduced, numeraire_index, mp.N)
 
-    # 2. solve_price_and_cost 等を呼んで内生変数を計算
+    # 2. Calculate endogenous variables for given w_hat_full
     N, J = mp.N, mp.J
     Pm_init = np.ones((N, J))
     c_hat, Pm_hat = solve_price_and_cost(
@@ -92,7 +93,7 @@ def objective_w_hat_reduced(
     pif_hat = calc_piu_hat(c_hat, Pf_hat, "f", mp, shocks)
     pim_hat = calc_piu_hat(c_hat, Pm_hat, "m", mp, shocks)
 
-    # 3. Xf_prime, Xm_prime 計算
+    # 3. Calculate Xf_prime, Xm_prime
     Xf_prime, Xm_prime = solve_X_prime(
         w_hat_full,
         pif_hat,
@@ -107,26 +108,26 @@ def objective_w_hat_reduced(
         mute=True,
     )
 
-    # 4. 貿易収支の残差を計算
+    # 4. Calculate trade deficit and value added
     td_prime = calc_td_prime(pif_hat, pim_hat, Xf_prime, Xm_prime, mp, shocks)
     VA_prime = np.sum(mp.w0 * mp.L0 * w_hat_full)
     VA0 = np.sum(mp.w0 * mp.L0)
 
     diff = td_prime / VA_prime - mp.td / VA0
-    return np.max(abs(diff))
+    return np.max(abs(diff))  # return the maximum difference
 
 
 def reconstruct_w_hat(x_reduced, numeraire_index, N):
     """
-    長さ (N-1) のベクトル x_reduced を受け取り、
-    長さ N の w_hat_full を返す。
-    numeraire_index の要素は常に 1.0 に固定。
+    Function to receive a vector x_reduced of length (N-1) and
+    and return a vector w_hat_full of length N.
+    The element of numeraire_index is always fixed to 1.0.
     """
     w_hat_full = np.zeros(N)
     idx_red = 0
     for i in range(N):
         if i == numeraire_index:
-            w_hat_full[i] = 1.0  # numeraire 国を 1 に固定
+            w_hat_full[i] = 1.0  # Fix the numeraire country to 1
         else:
             w_hat_full[i] = x_reduced[idx_red]
             idx_red += 1

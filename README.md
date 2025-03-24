@@ -1,6 +1,8 @@
 # Volatility Analysis
 This project analyzes how economic variables ((real/nominal) wages, price indices, expenditures,...) reacts exogenous productivity shocks and trade cost shocks. The model is an extended version of Caliendo and Parro (2015), which include (i) distinction of final goods intermediate inputs (they have different transportation costs), (ii) analysis of both productivity shocks and trade cost shocks.
 
+![Structure Image](./figures_readme/structure.png)
+
 ## models.py
 This file defines classes for model parameters, exogenous shocks, and model solutions. The classes are designed to handle parameter consistency checks, store data, and be used in solving the model.
 
@@ -43,3 +45,18 @@ Function to calculate expenditure to the intermediate inputs (equation (11) of t
 
 ### calc_td_prime
 Function to calculate trade deficit after the shock (equation (12) of the paper).
+
+## solvers.py
+This file contains some functions to solve the model using loops.
+
+### solve_price_and_cost
+Function to solve c_hat and Pm_hat (inner loop). For any given value of w_hat, it works
+
+## functions.py
+This file defines some utility functions.
+
+### generate_rand_params
+Function to randomly generate parameters. Receives the number of countries and sectors and returns the ModelParams object.
+
+### generate_symmetric_params
+Function to randomly generate parameters, but each country should be identical. Doesn't work for some reason.

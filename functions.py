@@ -2,103 +2,6 @@ import numpy as np
 from models import ModelParams
 
 
-def define_theta():
-    """
-    Trade elasticity: take from "Global Value Chains and Aggregate Income Volatility"
-
-    ---------- Tradable Sectors ----------
-    1 Agriculture 2 Fishing
-    -> Sector 1 -> 1. Agriculture, Hunting, Forestry and Fishing
-    -> 6.26
-
-    3 Mining and Quarrying
-    -> Sector 2 -> 2. Mining and Quarrying
-    -> 8.05
-
-    4 Food & Beverages
-    -> Sector 3 -> 3. Food, Beverages and Tobacco
-    -> 7.31
-
-    5 Textiles and Wearing Apparel
-    -> Sector 4 -> 4. Textile Products, Leather Products and Footwear
-    -> 6.31
-
-    6 Wood and Paper
-    -> Sector 5 -> 6. Wood and Products of Wood and Cork
-                &  7. Pulp, Paper, Paper, Printing and Publishing
-    -> (9.12 +11.37) / 2 = 10.245
-
-    7 Petroleum, Chemical and Non-Metallic Mineral Products
-    -> Sector 6 -> 8. Coke, Refined Petroleum and Nuclear Fuel
-                &  9. Chemicals and Chemical Products
-                & 10. Rubber and Plastics
-                & 11. Other Non-Metallic Mineral
-    -> (6.1 + 6.31 + 6.22 + 4.78) / 4 = 5.8525
-
-    8 Metal Products
-    -> Sector 7 -> 12. Basic Metals and Fabricated Metal
-    -> 7.78
-
-    9 Electrical and Machinery
-    -> Sector 8 -> 13. Machinery, Nec
-                &  14. Electrical and Optical Equipment
-    -> (7.43 + 9.69) / 2 = 8.56
-
-    10 Transport Equipment
-    -> Sector 9 -> 15. Transport Equipment
-    -> 7.13
-
-    11 Other Manufacturing 12 Recycling
-    -> Sector 10 -> 16. Manufacturing, Nec; Recycling
-    -> 8.01
-
-    ---------- Non Tradable Sectors ----------
-    13 Electricity, Gas and Water;
-    14 Construction;
-    15 Maintenance and Repair;
-    16 Wholesale Trade;
-    17 Retail Trade;
-    18 Hotels and Restaurants;
-    19 Transport;
-    20 Post and Telecommunications;
-    21 Financial Intermediation and Business Activities;
-    22 Public Administration;
-    23 Education, Health and Other Services;
-    24 Private Households;
-    25 Others
-    -> Use the average of the tradable sectors = 7.31
-    """
-    theta = np.array(
-        [
-            6.26,
-            8.05,
-            7.31,
-            6.31,
-            10.25,
-            5.85,
-            7.78,
-            8.56,
-            7.13,
-            8.01,
-            7.31,
-            7.31,
-            7.31,
-            7.31,
-            7.31,
-            7.31,
-            7.31,
-            7.31,
-            7.31,
-            7.31,
-            7.31,
-            7.31,
-            7.31,
-        ]
-    )
-
-    return theta
-
-
 def generate_rand_params(N: int, J: int):
     """
     Generate random parameters for the model.
@@ -184,67 +87,86 @@ def generate_rand_params(N: int, J: int):
         return None
 
 
-def generate_symmetric_params(N: int, J: int):
+def generate_symmetric_params(N: int, J: int) -> ModelParams:
     """
-    Generate random parameters for the model.
-
-    ---------- Arguments ----------
-    N : int
-        Number of countries.
-    J : int
-        Number of sectors.
-
-    ---------- Returns ----------
-    model_params : ModelParams
-        An instance of ModelParams filled with the generated parameters.
+    Generate symmetric parameters for the model. Every country receives
+    identical parameter values to ensure complete symmetry across countries.
     """
 
-    alpha = np.ones((N, J)) + np.random.rand(N, J)  # 1 ~ 2
-    alpha = alpha / alpha.sum(axis=1, keepdims=True)
+    # 1) alpha: pick a single random vector alpha_j, then replicate for all N
+    alpha_j = np.ones(J) + np.random.rand(J)  # ~ [1,2]
+    alpha_j /= alpha_j.sum()  # sums to 1 across sectors
+    alpha = np.tile(alpha_j, (N, 1))
 
-    beta = np.ones((N, J)) * 2 + np.random.rand(N, J)  # 2 ~ 3
-    gamma = (
-        np.ones((N, J, J)) * 7 / J + np.random.rand(N, J, J) / J
-    )  # gamma_sum = 7 ~ 8
+    # 2) beta and gamma: ensure sum_k gamma[n,k,j] + beta[n,j] = 1
+    #    for each row j, then replicate for all countries
+    #    We first generate a single row (beta_j, gamma_jj) that sums to 1,
+    #    then replicate that across N.
+    beta_j = (np.ones(J) * 2) + np.random.rand(J)  # ~ [2,3]
+    gamma_jj = (np.ones((J, J)) * (7.0 / J)) + (
+        np.random.rand(J, J) / J
+    )  # each row ~ [7,8]/J
 
-    # Calculate beta and gamma so that they sum to 1
-    sum_gamma = gamma.sum(axis=1)
-    beta_gamma_sum = beta + sum_gamma
+    # Normalize each row so that beta_j[j] + sum(gamma_jj[j, :]) = 1 exactly
+    for j_ in range(J):
+        row_sum = gamma_jj[j_, :].sum() + beta_j[j_]
+        # Safeguard for extremely small denominators
+        if row_sum < 1e-15:
+            beta_j[j_] = 1.0
+            gamma_jj[j_, :] = 0.0
+        else:
+            gamma_jj[j_, :] /= row_sum
+            beta_j[j_] /= row_sum
 
-    for n in range(N):
-        for j_ in range(J):
-            denom = beta_gamma_sum[n, j_]
-            if denom < 1e-15:
-                # if denom is too small, set beta=1 and gamma=0
-                beta[n, j_] = 1.0
-                gamma[n, :, j_] = 0.0
-            else:
-                # normalize beta and gamma
-                beta[n, j_] /= denom
-                gamma[n, :, j_] /= denom
+    beta = np.tile(beta_j, (N, 1))  # shape (N,J)
+    gamma = np.tile(gamma_jj[np.newaxis, :, :], (N, 1, 1))  # shape (N,J,J)
 
-    theta = np.random.rand(J)
-    theta = theta * 4 + 6  # 6 ~ 10
+    # 3) theta: technology parameters (same for all countries but vary by sector)
+    theta = np.random.rand(J) * 4 + 6  # ~ [6,10]
 
-    pif = np.ones((N, N, J)) + np.random.rand(N, N, J)  # 1 ~ 2
-    pif_sum = pif.sum(axis=1, keepdims=True)
-    pif = pif / pif_sum
-
-    pim = np.ones((N, N, J)) + np.random.rand(N, N, J)  # 1 ~ 2
-    pim_sum = pim.sum(axis=1, keepdims=True)
-    pim = pim / pim_sum
-
-    tilde_tau = np.random.rand(N, N, J) + 1  # 1 ~ 2
+    # 4) pif, pim: final & intermediate input sourcing distribution
+    #    We pick a single distribution over N for each and replicate across i, j
+    dist_pif = np.random.rand(N)
+    dist_pif /= dist_pif.sum()
+    pif = np.zeros((N, N, J))
     for i in range(N):
-        tilde_tau[i, i, :] = 1
+        for j_ in range(J):
+            pif[i, :, j_] = dist_pif
 
-    Xf = np.ones((N, J)) * 100 + np.random.rand(N, J) * 900  # 100 ~ 1000
-    Xm = np.ones((N, J)) * 100 + np.random.rand(N, J) * 900  # 100 ~ 1000
-    w0 = np.ones(N)  # 1
-    L0 = np.ones(N) * 100 + np.random.rand(N) * 900  # 100 ~ 1000
+    dist_pim = np.random.rand(N)
+    dist_pim /= dist_pim.sum()
+    pim = np.zeros((N, N, J))
+    for i in range(N):
+        for j_ in range(J):
+            pim[i, :, j_] = dist_pim
 
+    # 5) tilde_tau: trade costs
+    #    For full symmetry, let off-diagonals = T in [1,2], diagonals = 1
+    T = 1.0 + np.random.rand()  # ~ [1,2]
+    tilde_tau = np.ones((N, N, J))
+    for i in range(N):
+        for n in range(N):
+            if i != n:
+                tilde_tau[i, n, :] = T
+
+    # 6) Xf, Xm: final and intermediate demands, pick one random vector over J and replicate to each country
+    Xf_j = 100 + np.random.rand(J) * 900  # ~ [100,1000]
+    Xf = np.tile(Xf_j, (N, 1))
+
+    Xm_j = 100 + np.random.rand(J) * 900  # ~ [100,1000]
+    Xm = np.tile(Xm_j, (N, 1))
+
+    # 7) w0: wage for each country (set to 1 for symmetry)
+    w0 = np.ones(N)
+
+    # 8) L0: labor endowment, pick one random value, replicate for all countries
+    L = 100 + np.random.rand() * 900  # ~ [100,1000]
+    L0 = np.ones(N) * L
+
+    # 9) td: policy/tariff or dummy param, set to zero
     td = np.zeros(N)
 
+    # Build ModelParams
     mp = ModelParams(
         N=N,
         J=J,
@@ -262,10 +184,11 @@ def generate_symmetric_params(N: int, J: int):
         td=td,
     )
 
+    # Final check
     if mp.check_consistency():
         return mp
     else:
-        print("Generated parameters are inconsistent.")
+        print("Generated symmetric parameters are inconsistent.")
         return None
 
 
@@ -351,3 +274,13 @@ def generate_rand_params_without_usage(N: int, J: int):
     else:
         print("Generated parameters are inconsistent.")
         return None
+
+
+if __name__ == "__main__":
+    # Define the number of countries and sectors
+    N = 5
+    J = 3
+
+    # Generate symmetric parameters
+    mp = generate_symmetric_params(N, J)
+    print(mp)
