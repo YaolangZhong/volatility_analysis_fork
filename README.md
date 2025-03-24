@@ -29,9 +29,7 @@ This file defines model's equations to calculate equlibrium.
 ### calc_c_hat
 Function to calculate unit cost change (equation (7) of the paper).
 
-```math
-\hat{c}_{i}^{s} = \hat{w}_{i}^{\beta_{i}^{s}} \prod_{k=1}^{s} \left( \hat{P}_{i}^{k,m} \right)^{\beta_{i}^{sk}} \tag{7}
-```
+$$\hat{c}_{i}^{s} = \hat{w}_{i}^{\beta_{i}^{s}} \prod_{k=1}^{s} \left( \hat{P}_{i}^{k,m} \right)^{\beta_{i}^{sk}} \tag{7}$$
 
 ### calc_Pu_hat
 Function to calculate price index change (equation (8) of the paper).
