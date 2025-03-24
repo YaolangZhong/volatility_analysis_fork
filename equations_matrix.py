@@ -1,5 +1,9 @@
 import numpy as np
+from numba import njit, prange
 from models import ModelParams, ModelShocks, Usage
+
+
+
 
 def calc_X(
     w_hat,
@@ -148,3 +152,35 @@ def calc_X(
     Xf = Xf_vec.reshape(N, J)  # Final goods, shape: (N, J)
     Xm = Xm_vec.reshape(N, J)  # Intermediate goods, shape: (N, J)
     return Xf, Xm
+
+
+
+@njit
+def calc_c_hat_numba(w_hat, Pm_hat, beta, gamma, N, J):
+    """
+    Equation (7) in the paper
+    Calculate the unit cost index changes (c_hat)
+    given wage changes (w_hat) and intermediate input price changes (Pm_hat).
+    Endogenous variables:
+        w_hat: (N,) array of wage changes
+        Pm_hat: (N, J) array of intermediate input price changes
+    Returns:
+        c_hat: (N, J) array of unit cost index changes
+    This is a Numba-accelerated version of calc_c_hat.
+    """
+    log_w_hat = np.log(w_hat)         # shape: (N,)
+    log_Pm_hat = np.log(Pm_hat)         # shape: (N, J)
+    
+    c_hat = np.empty((N, J))
+    # Compute wage component: beta[n,j]*log_w_hat[n]
+    for n in prange(N):
+        for j in range(J):
+            # wage_component for country n and sector j
+            wage_comp = beta[n, j] * log_w_hat[n]
+            # input_component: sum over k of gamma[n,k,j] * log_Pm_hat[n,k]
+            input_comp = 0.0
+            for k in range(J):   # assuming gamma is (N, J, J) and log_Pm_hat is (N, J)
+                input_comp += gamma[n, k, j] * log_Pm_hat[n, k]
+            log_c = wage_comp + input_comp
+            c_hat[n, j] = np.exp(log_c)
+    return c_hat

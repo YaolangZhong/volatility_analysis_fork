@@ -22,7 +22,8 @@ def calc_c_hat(w_hat, Pm_hat, mp: ModelParams):
     wage_component = mp.beta * log_w_hat[:, np.newaxis]
 
     # \sum_k gamma[n,k,j] * log(Pm_hat[n,k])
-    input_component = np.einsum("nkj,nk->nj", mp.gamma, log_Pm_hat)
+    # input_component = np.einsum("nkj,nk->nj", mp.gamma, log_Pm_hat)
+    input_component = np.einsum("njk,nk->nj", mp.gamma, log_Pm_hat)
 
     log_c_hat = wage_component + input_component
     c_hat = np.exp(log_c_hat)
