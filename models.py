@@ -644,5 +644,13 @@ def main():
     params.check_consistency()
 
 
+def compute_W(w_hat, Pf_hat, alpha):
+    
+    P_index = np.prod(Pf_hat ** alpha, axis=1)
+    W_hat = w_hat/ P_index
+    
+    return W_hat
+
+
 if __name__ == "__main__":
     main()
