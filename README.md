@@ -75,19 +75,19 @@ TD_{n}^{'} = \sum_{s=1}^S \sum_{i=1}^N \left( \underbrace{\frac{\pi_{ni}^{sf'} X
 This file contains some functions to solve the model using loops.
 
 ### solve_price_and_cost
-Function to solve c_hat and Pm_hat (inner loop). For any given value of $\{\hat{w}_n\}$, it calculates $\{\hat{c}_{n}^{s}\}$ and $\{\hat{P}_{n}^{s,m}\}$ that simultaneously satisfy equations (7) and (8). It simply uses loops.
+Function to solve c_hat and Pm_hat (inner loop). For any given value of $\{ \hat{w}_n \}$, it calculates $\{ \hat{c}_{n}^{s} \}$ and $\{ \hat{P}_{n}^{s,m} \}$ that simultaneously satisfy equations (7) and (8). It simply uses loops.
 
 ### solve_X_prime
-Function to solve $\{X_{n}^{s, f '}\}$ and $\{X_{n}^{s, m '}\}$. For any given value of $\{\hat{w}_n\}$, $\{\hat{\pi}_{ni}^{s, f}\}$, $\{\hat{\pi}_{ni}^{s, m}\}$, $TD_{n}^{'}$. Takes the initial guess of $\{X_{n}^{s, f '}\}$ and $\{X_{n}^{s, m '}\}$ and solve by using loops.
+Function to solve $\{ X_{n}^{s, f '} \}$ and $\{ X_{n}^{s, m '} \}$. For any given value of $\{ \hat{w}_n \}$, $\{ \hat{\pi}_{ni}^{s, f} \}$, $\{ \hat{\pi}_{ni}^{s, m} \}$, $TD_{n}^{'}$. Takes the initial guess of $\{ X_{n}^{s, f '} \}$ and $\{ X_{n}^{s, m '} \}$ and solve by using loops.
 
 ### <span style="color: grey; ">solve_equilibrium</span>
-Function to solve the entire equilibrium using loops. It guesses $\{\hat{w}_n\}$ and calculate endogenous variables and the difference of world-GDP-normalized trade deficit
+Function to solve the entire equilibrium using loops. It guesses $\{ \hat{w}_n \}$ and calculate endogenous variables and the difference of world-GDP-normalized trade deficit
 
 ```math
-ZW2_n = \frac{TD_{n}^{'}}{\sum_{i=1}^{N} \hat{w}_{n} w_{n0} L_{n0}} - \frac{TD_{n0}}{\sum_{i=1}^{N} w_{n0} L_{n0}}, \tag{R-1}
+ZW2_n = \frac{TD_{n}^{'}}{\sum_{i=1}^{N} \hat{w}_{n} w_{n0} L_{n0}} - \frac{TD_{n0}}{\sum_{i=1}^{N} w_{n0} L_{n0}},
 ```
 
-and updates the guess $\{\hat{w}_n\}$ by
+and updates the guess $\{ \hat{w}_n \}$ by
 
 ```math
 \hat{w}_{n}^{\text{new}} = \hat{w}_{n}^{\text{old}} \exp \left(-\frac{ZW2_n}{10} \right).
@@ -114,7 +114,7 @@ This file defines the objective function for the mathematical optimization, whic
 Function to reconstruct a $N$-length vector of $\hat{w}_{n}$ from the $(N-1)$-length vector without the numeraire country.
 
 ### objective_w_hat_reduced
-Function to calculate $ZW2_n$ for countries other than the numeraire country following (R-1) and returns the max-absolute value of the $\{ZW2_n\}$ vector. Used as the objective function for solving equilibrium.
+Function to calculate the normalized trade deficit $ZW2_n$ for countries other than the numeraire country and returns the max-absolute value of the $\{ZW2_n\}$ vector. Used as the objective function for solving equilibrium.
 
 ### <span style="color: grey; ">objective_w_hat</span>
 Function to calculate $ZW2_n$ for all countries (including numeraire country). No longer used.
