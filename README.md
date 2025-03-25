@@ -31,8 +31,6 @@ Function to calculate unit cost change (equation (7) of the paper).
 
 $$
 \hat{c}_{i}^{s}
-  = \hat{w}_{i}^{\beta_{i}^{s}}
-    \prod_{k=1}^{s} \Bigl(\hat{P}_{i}^{(k,m)}\Bigr)^{\beta_{i}^{s k}}
 $$
 
 
