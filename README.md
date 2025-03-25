@@ -30,7 +30,7 @@ This file defines model's equations to calculate equlibrium.
 Function to calculate unit cost change (equation (7) of the paper).
 
 ```math
-\hat{c}_{i}^{s} = \hat{w}_{i}^{\beta_{i}^{s}} \prod_{k=1}^{s} \left( \hat{P}_{i}^{km'} \right)^{\beta_{i}^{sk}} \tag{7}
+\hat{c}_{i}^{s} = \hat{w}_{i}^{\beta_{i}^{s}} \prod_{k=1}^{s} \left( \hat{P}_{i}^{km'} \right)^{\beta_{i}^{sk}}
 ```
 
 
@@ -39,7 +39,7 @@ Function to calculate price index change (equation (8) of the paper).
 It requires "usage" as an input (usage = "f" for final goods, = "m" for intermediate inputs)
 
 ```math
-\hat{P}_{n}^{su} = \left( \sum_{h=1}^{N} \pi_{nh0}^{su} \hat{\lambda}_{h}^{s} \left( \hat{c}_{h}^{s} \hat{d}_{nh}^{su} \right)^{- \theta^{s}} \right)^{- \frac{1}{\theta^{s}}} \tag{8}
+\hat{P}_{n}^{su} = \left( \sum_{h=1}^{N} \pi_{nh0}^{su} \hat{\lambda}_{h}^{s} \left( \hat{c}_{h}^{s} \hat{d}_{nh}^{su} \right)^{- \theta^{s}} \right)^{- \frac{1}{\theta^{s}}}
 ```
 
 ### calc_pi_hat
@@ -47,28 +47,28 @@ Function to calculate expenditure share change (equation (9) of the paper).
 It requires "usage" as an input (usage = "f" for final goods, = "m" for intermediate inputs)
 
 ```math
-\hat{\pi}_{ni}^{su} = \frac{\hat{\lambda}_{i}^{s} \left( \hat{c}_{h}^{s} \hat{d}_{nh}^{su} \right)^{- \theta^{s}}}{\left( \hat{P}_{n}^{su} \right)^{- \theta^{s}}} \tag{9}
+\hat{\pi}_{ni}^{su} = \frac{\hat{\lambda}_{i}^{s} \left( \hat{c}_{h}^{s} \hat{d}_{nh}^{su} \right)^{- \theta^{s}}}{\left( \hat{P}_{n}^{su} \right)^{- \theta^{s}}}
 ```
 
 ### calc_Xf_prime
 Function to calculate expenditure to the final goods (equation (10) of the paper).
 
 ```math
-X_{n}^{sf'} = \alpha_{n}^{s} \left[ \hat{w}_{n} w_{n0} L_{n0} + \sum_{s=1}^S \sum_{i=1}^N \frac{\tau_{ni}^{s'}}{1 + \tau_{ni}^{s'}} \left( \pi_{ni}^{sf'} X_{n}^{sf'} + \pi_{ni}^{sm'} X_{n}^{sm'} \right) + TD_{n}^{'} \right] \tag{10}
+X_{n}^{sf'} = \alpha_{n}^{s} \left[ \hat{w}_{n} w_{n0} L_{n0} + \sum_{s=1}^S \sum_{i=1}^N \frac{\tau_{ni}^{s'}}{1 + \tau_{ni}^{s'}} \left( \pi_{ni}^{sf'} X_{n}^{sf'} + \pi_{ni}^{sm'} X_{n}^{sm'} \right) + TD_{n}^{'} \right]
 ```
 
 ### calc_Xm_prime
 Function to calculate expenditure to the intermediate inputs (equation (11) of the paper).
 
 ```math
-X_{n}^{sm'} = \sum_{k=1}^S \beta_{n}^{ks} \left( \sum_{i=1}^{N} \frac{\pi_{in}^{kf'}}{1 + \tau_{in}^{kf'}} X_{i}^{kf'} + \sum_{i=1}^N \frac{\pi_{in}^{km'}}{1 + \tau_{in}^{km'}} X_{i}^{km'} \right) \tag{11}
+X_{n}^{sm'} = \sum_{k=1}^S \beta_{n}^{ks} \left( \sum_{i=1}^{N} \frac{\pi_{in}^{kf'}}{1 + \tau_{in}^{kf'}} X_{i}^{kf'} + \sum_{i=1}^N \frac{\pi_{in}^{km'}}{1 + \tau_{in}^{km'}} X_{i}^{km'} \right)
 ```
 
 ### calc_td_prime
 Function to calculate trade deficit after the shock (equation (12) of the paper).
 
 ```math
-TD_{n}^{'} = \sum_{s=1}^S \sum_{i=1}^N \left( \underbrace{\frac{\pi_{ni}^{sf'} X_{nt}^{sf'} + \pi_{ni}^{sm'} X_{nt}^{sm'}}{1 + \tau_{ni}^{s'}}}_{\text{Import}} - \underbrace{\frac{\pi_{in}^{sf'} X_{i}^{sf'} + \pi_{in}^{sm'} X_{i}^{sm'}}{1 + \tau_{in}^{s'}}}_{\text{Export}} \right) \tag{12}
+TD_{n}^{'} = \sum_{s=1}^S \sum_{i=1}^N \left( \underbrace{\frac{\pi_{ni}^{sf'} X_{nt}^{sf'} + \pi_{ni}^{sm'} X_{nt}^{sm'}}{1 + \tau_{ni}^{s'}}}_{\text{Import}} - \underbrace{\frac{\pi_{in}^{sf'} X_{i}^{sf'} + \pi_{in}^{sm'} X_{i}^{sm'}}{1 + \tau_{in}^{s'}}}_{\text{Export}} \right)
 ```
 
 ## solvers.py
