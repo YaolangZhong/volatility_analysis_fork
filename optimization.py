@@ -5,6 +5,7 @@ from equations import (
     calc_piu_hat,
     calc_td_prime,
 )
+from equations_matrix import calc_X
 
 
 # Old objective function (no longer used)
@@ -94,18 +95,8 @@ def objective_w_hat_reduced(
     pim_hat = calc_piu_hat(c_hat, Pm_hat, "m", mp, shocks)
 
     # 3. Calculate Xf_prime, Xm_prime
-    Xf_prime, Xm_prime = solve_X_prime(
-        w_hat_full,
-        pif_hat,
-        pim_hat,
-        mp.td,
-        Xf_init,
-        Xm_init,
-        mp,
-        shocks,
-        max_iter=500,
-        tol=1e-6,
-        mute=True,
+    Xf_prime, Xm_prime = calc_X(
+        w_hat_full, pif_hat, pim_hat, mp.td, mp, shocks
     )
 
     # 4. Calculate trade deficit and value added

@@ -145,7 +145,7 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
 
     # ========== For now, generate random parameters ==========
-    N, J = 30, 20
+    N, J = 5, 3
     mp = generate_rand_params(N, J)
     if mp is None:
         print("Failed to generate random parameters")
