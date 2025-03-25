@@ -29,9 +29,9 @@ This file defines model's equations to calculate equlibrium.
 ### calc_c_hat
 Function to calculate unit cost change (equation (7) of the paper).
 
-$$
+```math
 \hat{c}_{i}^{s} = \hat{w}_{i}^{\beta_{i}^{s}}
-$$
+```
 
 
 ### calc_Pu_hat
