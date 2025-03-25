@@ -1,11 +1,7 @@
 import numpy as np
 
-<<<<<<< HEAD
 
-def calc_X(w_hat, alpha, gamma, pi_prime, tilde_tau_prime, D, VA):
-=======
 def calc_X_cp(w_hat, alpha, gamma, pi_prime, tilde_tau_prime, D, VA):
->>>>>>> 275f4057082a80a1a2d465dfeac6c79d2eaaa329
     N, J = alpha.shape
 
     def calc_A():
