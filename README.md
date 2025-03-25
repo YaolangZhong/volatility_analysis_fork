@@ -30,7 +30,7 @@ This file defines model's equations to calculate equlibrium.
 Function to calculate unit cost change (equation (7) of the paper).
 
 ```math
-\hat{c}_{i}^{s} = \hat{w}_{i}^{\beta_{i}^{s}}
+\hat{c}_{i}^{s} = \hat{w}_{i}^{\beta_{i}^{s}} \prod_{k=1}^{s}
 ```
 
 
