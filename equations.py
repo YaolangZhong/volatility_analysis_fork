@@ -1,5 +1,5 @@
 import numpy as np
-from models import ModelParams, ModelShocks, Usage
+from models import ModelParams, ModelShocks, ModelSol, Usage
 
 
 def calc_c_hat(w_hat, Pm_hat, mp: ModelParams):
@@ -387,6 +387,18 @@ def calc_HHI(pim, pif, Xm, Xf, tau_tilde):
     # Compute HHI for each exporting country:
     HHI = np.sum((Q / Q_total[:, None])**2, axis=1)  # shape: (N,)
     return HHI
+
+
+def calc_W(sol: ModelSol):
+    Pf_hat = sol.Pf_hat
+    alpha = sol.params.alpha
+    w_hat = sol.w_hat
+    P_index = np.prod(Pf_hat ** alpha, axis=1)
+    W_hat = w_hat/ P_index
+    return W_hat   
+
+
+
 
 if __name__ == "__main__":
     params = generate_test_parameters()

@@ -67,11 +67,15 @@ def run_counterfactual(i, out_dir, shocks):
     best_x = [None]
     res = None
 
+    iter_count = [0]
     def callback_func(xk):
         """Callback function to check the objective value and stop the optimization."""
+        iter_count[0] += 1  # Increment the iteration counter
         val = objective_w_hat_reduced(
             xk, mp, shocks, Xf_init, Xm_init, numeraire_index
         )
+        # Print the current loss value for each iteration
+        print(f"Iteration {iter_count[0]}: loss = {val}")
         threshold = 1e-6
         if val < threshold:
             best_x[0] = xk.copy()
@@ -85,7 +89,8 @@ def run_counterfactual(i, out_dir, shocks):
             objective_w_hat_reduced,
             x0_guess,
             args=(mp, shocks, Xf_init, Xm_init, numeraire_index),
-            method="Nelder-Mead",
+            # method="Nelder-Mead",
+            method="L-BFGS-B",
             callback=callback_func,
             options={"maxiter": 10000, "disp": False},
         )
@@ -251,38 +256,44 @@ def main():
     print("Final wage changes (including numeraire=1):", w_hat_opt)
 
     # (F) Calculate the equilibrium
-    Pm_init = np.ones((N, J))
-    c_hat, Pm_hat = solve_price_and_cost(
-        w_hat_opt,
-        Pm_init,
-        mp,
-        bench_shocks,
-        max_iter=1000,
-        tol=1e-7,
-        mute=True,
-    )
-    Pf_hat = calc_Pu_hat(c_hat, "f", mp, bench_shocks)
-    pif_hat = calc_piu_hat(c_hat, Pf_hat, "f", mp, bench_shocks)
-    pim_hat = calc_piu_hat(c_hat, Pm_hat, "m", mp, bench_shocks)
-    Xf_prime, Xm_prime = calc_X(
-        w_hat_opt, pif_hat, pim_hat, mp.td, mp, bench_shocks
-    )
+    # Pm_init = np.ones((N, J))
+    # c_hat, Pm_hat = solve_price_and_cost(
+    #     w_hat_opt,
+    #     Pm_init,
+    #     mp,
+    #     bench_shocks,
+    #     max_iter=1000,
+    #     tol=1e-7,
+    #     mute=True,
+    # )
+    # Pf_hat = calc_Pu_hat(c_hat, "f", mp, bench_shocks)
+    # pif_hat = calc_piu_hat(c_hat, Pf_hat, "f", mp, bench_shocks)
+    # pim_hat = calc_piu_hat(c_hat, Pm_hat, "m", mp, bench_shocks)
+    # Xf_prime, Xm_prime = calc_X(
+    #     w_hat_opt, pif_hat, pim_hat, mp.td, mp, bench_shocks
+    # )
 
-    # (G) Save the results
-    bench_sol = ModelSol(
-        params=mp,
-        shocks=bench_shocks,
-        w_hat=w_hat_opt,
-        c_hat=c_hat,
-        Pf_hat=Pf_hat,
-        Pm_hat=Pm_hat,
-        pif_hat=pif_hat,
-        pim_hat=pim_hat,
-        Xf_prime=Xf_prime,
-        Xm_prime=Xm_prime,
-    )
-    bench_sol.save_to_npz(f"{bench_dir}/equilibrium.npz")
-    print("Benchmark equilibrium saved.")
+    # # (G) Save the results
+    # bench_sol = ModelSol(
+    #     params=mp,
+    #     shocks=bench_shocks,
+    #     w_hat=w_hat_opt,
+    #     c_hat=c_hat,
+    #     Pf_hat=Pf_hat,
+    #     Pm_hat=Pm_hat,
+    #     pif_hat=pif_hat,
+    #     pim_hat=pim_hat,
+    #     Xf_prime=Xf_prime,
+    #     Xm_prime=Xm_prime,
+    # )
+    # bench_sol.save_to_npz(f"{bench_dir}/equilibrium.npz")
+    # print("Benchmark equilibrium saved.")
+    
+
+    bench_sol = ModelSol.load_from_npz(f"{bench_dir}/equilibrium.npz", mp, bench_shocks)
+
+
+
 
     # # =========================================================================
     # # Step 3. Solve for counterfactual equilibria
@@ -319,20 +330,23 @@ def main():
 
     # =========================================================================
     # Step. 4 Run simulations for different sigmas
-    num = 100
-    sigmas = [0.1, 0.2, 0.3]
+    num = 1
+    multipliers = [1, 2, 4]
+    sigma = 0.2
+    # sigmas = [0.1, 0.2, 0.3]
 
-    for sigma in sigmas:
-        # Generate random shocks for corresponding sigma
-        sigma_dir = f"{out_dir}/sigma_{sigma}"
-        os.makedirs(sigma_dir, exist_ok=True)
-
+    # for sigma in sigmas:
+    #     # Generate random shocks for corresponding sigma
+    #     sigma_dir = f"{out_dir}/sigma_{sigma}"
+    #     os.makedirs(sigma_dir, exist_ok=True)
+    for m in multipliers:
+        multipler_dir = f"{out_dir}/d_{m}"
+        os.makedirs(multipler_dir, exist_ok=True)
         shock_list = []
         for i in range(num):
-            # lambda_hat = np.random.rand(N, J) * 0.2 + 1.0
-            np.exp(np.random.normal(loc=0.0, scale=sigma, size=(N, J)))
-            df_hat = np.ones((N, N, J))  # No shocks on trade cost
-            dm_hat = np.ones((N, N, J))  # No shocks on trade cost
+            lambda_hat = np.exp(np.random.normal(loc=0.0, scale=sigma, size=(N, J)))
+            df_hat = np.ones((N, N, J)) 
+            dm_hat = np.ones((N, N, J))*m  
             tilde_tau_prime = np.ones((N, N, J))  # No shocks on trade cost
             shock_list.append(
                 ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
@@ -346,14 +360,14 @@ def main():
             futures = []
             for i in range(num):
                 fut = executor.submit(
-                    run_counterfactual, i + 1, sigma_dir, shock_list[i]
+                    run_counterfactual, i + 1, multipler_dir, shock_list[i]
                 )
                 futures.append(fut)
 
             for fut in as_completed(futures):
                 print(fut.result())
 
-        print(f"All counterfactual equilibria for sigma = {sigma} are saved.")
+        print(f"All counterfactual equilibria for multiplier = {m} are saved.")
 
 
 if __name__ == "__main__":
