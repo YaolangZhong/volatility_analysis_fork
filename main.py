@@ -262,38 +262,75 @@ def main():
     bench_sol.save_to_npz(f"{bench_dir}/equilibrium.npz")
     print("Benchmark equilibrium saved.")
 
+    # # =========================================================================
+    # # Step 3. Solve for counterfactual equilibria
+    # num = 100
+
+    # # ========== For now, generate random shocks ==========
+    # shock_list = []
+    # for i in range(num):
+    #     lambda_hat = np.random.rand(N, J) * 0.2 + 1.0
+    #     df_hat = np.random.rand(N, N, J) * 0.2 + 1.0
+    #     dm_hat = np.random.rand(N, N, J) * 0.2 + 1.0
+    #     tilde_tau_prime = np.random.rand(N, N, J) * 0.2 + 1.0
+    #     shock_list.append(
+    #         ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
+    #     )
+    # # ========== Replace this part with generating shocks from estimated parameters ==========
+
+    # with ProcessPoolExecutor(
+    #     max_workers=os.cpu_count() - 2,
+    #     initializer=init_worker,
+    #     initargs=(mp, bench_sol, numeraire_index),
+    # ) as executor:
+    #     futures = []
+    #     for i in range(num):
+    #         fut = executor.submit(
+    #             run_counterfactual, i + 1, out_dir, shock_list[i]
+    #         )
+    #         futures.append(fut)
+
+    #     for fut in as_completed(futures):
+    #         print(fut.result())
+
+    # print("All counterfactual equilibria are solved.")
+
     # =========================================================================
-    # Step 3. Solve for counterfactual equilibria
+    # Step. 4 Run simulations for different sigmas
     num = 100
+    sigmas = [0.1, 0.2, 0.3]
 
-    # ========== For now, generate random shocks ==========
-    shock_list = []
-    for i in range(num):
-        lambda_hat = np.random.rand(N, J) * 0.2 + 1.0
-        df_hat = np.random.rand(N, N, J) * 0.2 + 1.0
-        dm_hat = np.random.rand(N, N, J) * 0.2 + 1.0
-        tilde_tau_prime = np.random.rand(N, N, J) * 0.2 + 1.0
-        shock_list.append(
-            ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
-        )
-    # ========== Replace this part with generating shocks from estimated parameters ==========
+    for sigma in sigmas:
+        # Generate random shocks for corresponding sigma
+        sigma_dir = f"{out_dir}/sigma_{sigma}"
+        os.makedirs(sigma_dir, exist_ok=True)
 
-    with ProcessPoolExecutor(
-        max_workers=os.cpu_count() - 2,
-        initializer=init_worker,
-        initargs=(mp, bench_sol, numeraire_index),
-    ) as executor:
-        futures = []
+        shock_list = []
         for i in range(num):
-            fut = executor.submit(
-                run_counterfactual, i + 1, out_dir, shock_list[i]
+            lambda_hat = np.random.rand(N, J) * 0.2 + 1.0
+            df_hat = np.ones((N, N, J))  # No shocks on trade cost
+            dm_hat = np.ones((N, N, J))  # No shocks on trade cost
+            tilde_tau_prime = np.ones((N, N, J))  # No shocks on trade cost
+            shock_list.append(
+                ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
             )
-            futures.append(fut)
 
-        for fut in as_completed(futures):
-            print(fut.result())
+        with ProcessPoolExecutor(
+            max_workers=os.cpu_count() - 2,
+            initializer=init_worker,
+            initargs=(mp, bench_sol, numeraire_index),
+        ) as executor:
+            futures = []
+            for i in range(num):
+                fut = executor.submit(
+                    run_counterfactual, i + 1, sigma_dir, shock_list[i]
+                )
+                futures.append(fut)
 
-    print("All counterfactual equilibria are solved.")
+            for fut in as_completed(futures):
+                print(fut.result())
+
+        print(f"All counterfactual equilibria for sigma = {sigma} are saved.")
 
 
 if __name__ == "__main__":
