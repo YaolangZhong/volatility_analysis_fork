@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import time
-from models import ModelShocks, ModelSol
+from models import ModelParams, ModelShocks, ModelSol
 from equations import calc_Pu_hat, calc_piu_hat
 from equations_matrix import calc_X
 from solvers import solve_price_and_cost
@@ -145,15 +145,32 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
 
     # ========== For now, generate random parameters ==========
-    N, J = 5, 3
-    mp = generate_rand_params(N, J)
-    if mp is None:
-        print("Failed to generate random parameters")
-        return None
-    else:
-        mp.save_to_npz(f"{out_dir}/model_params.npz")
+    # N, J = 5, 3
+    # mp = generate_rand_params(N, J)
+    # if mp is None:
+    #     print("Failed to generate random parameters")
+    #     return None
+    # else:
+    #     mp.save_to_npz(f"{out_dir}/model_params.npz")
     # ===== Replace this part with loading parameters from a file =====
-
+    data = np.load("real_data.npz")
+    N, J = data["N"], data["J"]
+    mp = ModelParams(N=N, 
+                     J=J, 
+                     alpha=data["alpha"], 
+                     beta=data["beta"], 
+                     gamma=data["gamma"], 
+                     theta=data["theta"], 
+                     pif=data["pi_f"], 
+                     pim=data["pi_m"], 
+                     tilde_tau=data["tilde_tau"], 
+                     Xf=np.ones((N, J)), 
+                     Xm=np.ones((N, J)), 
+                     w0=data["VA"], 
+                     L0=np.ones_like(data["VA"]), 
+                     td=data["D"])
+    print("Loaded the parameters from the real data")
+    mp.save_to_npz(f"{out_dir}/model_params.npz")
     # =========================================================================
     # Step 2. Solve for the benchmark equilibrium
     bench_dir = f"{out_dir}/benchmark"
@@ -190,11 +207,15 @@ def main():
     best_x = [None]
     res = None
 
+    iter_count = [0]
     def callback_func(xk):
         """Callback function to check the objective value and stop the optimization."""
+        iter_count[0] += 1  # Increment the iteration counter
         val = objective_w_hat_reduced(
             xk, mp, bench_shocks, Xf_init, Xm_init, numeraire_index
         )
+        # Print the current loss value for each iteration
+        print(f"Iteration {iter_count[0]}: loss = {val}")
         threshold = 1e-6
         if val < threshold:
             best_x[0] = xk.copy()
@@ -208,7 +229,8 @@ def main():
             objective_w_hat_reduced,
             x0_guess,
             args=(mp, bench_shocks, Xf_init, Xm_init, numeraire_index),
-            method="Nelder-Mead",
+            # method="Nelder-Mead",
+            method="L-BFGS-B",
             callback=callback_func,
             options={"maxiter": 10000, "disp": True},
         )
@@ -307,7 +329,8 @@ def main():
 
         shock_list = []
         for i in range(num):
-            lambda_hat = np.random.rand(N, J) * 0.2 + 1.0
+            # lambda_hat = np.random.rand(N, J) * 0.2 + 1.0
+            np.exp(np.random.normal(loc=0.0, scale=sigma, size=(N, J)))
             df_hat = np.ones((N, N, J))  # No shocks on trade cost
             dm_hat = np.ones((N, N, J))  # No shocks on trade cost
             tilde_tau_prime = np.ones((N, N, J))  # No shocks on trade cost

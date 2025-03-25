@@ -15,7 +15,7 @@ def calc_X(
     X = A + B X
     where
         X = [vec(Xf); vec(Xm)]
-        A = [Af; Am]
+        A = [vec(Af); vec(Am)]
         B = [Bff  Bfm]
             [Bmf  Bmm]
 

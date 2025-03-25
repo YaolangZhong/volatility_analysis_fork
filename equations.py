@@ -10,7 +10,7 @@ def calc_c_hat(w_hat, Pm_hat, mp: ModelParams):
     given wage changes (w_hat) and intermediate input price changes (Pm_hat).
 
     Endogenous variables:
-        w_hat: (N,) array of wage changes
+        w_hat: (N,) array of wage changes 
         Pm_hat: (N, J) array of intermediate input price changes
     Returns:
         c_hat: (N, J) array of unit cost index changes
@@ -22,7 +22,6 @@ def calc_c_hat(w_hat, Pm_hat, mp: ModelParams):
     wage_component = mp.beta * log_w_hat[:, np.newaxis]
 
     # \sum_k gamma[n,k,j] * log(Pm_hat[n,k])
-    # input_component = np.einsum("nkj,nk->nj", mp.gamma, log_Pm_hat)
     input_component = np.einsum("njk,nk->nj", mp.gamma, log_Pm_hat)
 
     log_c_hat = wage_component + input_component
@@ -226,6 +225,8 @@ def calc_Xm_prime(
     return Xm_prime
 
 
+
+
 def calc_td_prime(
     pif_hat, pim_hat, Xf_prime, Xm_prime, mp: ModelParams, shocks: ModelShocks
 ):
@@ -273,9 +274,9 @@ def calc_td_prime(
 
 # ------------------------------------------------------------------------------
 # Test the functions
-def generate_test_parameters():
-    N = 2
-    J = 2
+def generate_test_parameters(N, J):
+    # N = 2
+    # J = 2
     alpha = np.ones((N, J)) / J
     beta = np.ones((N, J)) * 0.3
     gamma = np.ones((N, J, J)) * 0.7 / J
@@ -355,7 +356,41 @@ def test_equations(params):
     # ...
 
 
+
+"""
+$$Q_n^s \equiv \sum_{i}\frac{(\pi_{in}^{sf}X_{i}^{sf}+\pi_{in}^{sm}X_{i}^{sm})}{1+\tau^s_{in}}$$
+Then,HHI can be calculated as
+$$HHI_n=\sum_k\left(\frac{Q_n^k}{\sum_s Q_n^s}\right)^2$$
+"""
+def calc_HHI(pim, pif, Xm, Xf, tau_tilde):
+    """
+    - pif, pim, tau_tilde: arrays of shape (i, n, s)
+        where:
+            i = importing country index,
+            n = exporting country index,
+            s = sector index.
+    - Xm, Xf: arrays of shape (i, s) corresponding to intermediate and final goods expenditures
+        for importing countries.
+    The formula is:
+      Q_n^s = sum_{i} [ (pif[i,n,s] * Xf[i,s] + pim[i,n,s] * Xm[i,s]) / (1 + tau_tilde[i,n,s]) ]
+    and then the HHI for each exporting country n is:
+      HHI_n = sum_s ( Q_n^s / (sum_{s'} Q_n^{s'}) )^2.
+    
+    Returns:
+      HHI: an array of shape (n,) giving the HHI for each exporting country.
+    """
+    numerator = pif * Xf[:, None, :] + pim * Xm[:, None, :]  # shape: (N, N, J)
+    term = numerator / (1 + tau_tilde)  # shape: (N, N, J)
+    Q = term.sum(axis=0)  # shape: (N, J)
+    # For each exporting country, sum over sectors to get the total Q:
+    Q_total = Q.sum(axis=1)  # shape: (N,)
+    # Compute HHI for each exporting country:
+    HHI = np.sum((Q / Q_total[:, None])**2, axis=1)  # shape: (N,)
+    return HHI
+
 if __name__ == "__main__":
     params = generate_test_parameters()
     shocks = generate_test_shocks(params)
     test_equations(params)
+
+
