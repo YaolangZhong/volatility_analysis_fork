@@ -175,7 +175,7 @@ def main():
                      L0=np.ones_like(data["VA"]), 
                      td=data["D"])
     print("Loaded the parameters from the real data")
-    mp.save_to_npz(f"{out_dir}/model_params.npz")
+    mp.save_to_npz(f"{out_dir}/params.npz")
     # =========================================================================
     # Step 2. Solve for the benchmark equilibrium
     bench_dir = f"{out_dir}/benchmark"
@@ -192,7 +192,7 @@ def main():
 
     bench_shocks = ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
     if bench_shocks.check_consistency():
-        bench_shocks.save_to_npz(f"{bench_dir}/bench_shocks.npz")
+        bench_shocks.save_to_npz(f"{bench_dir}/shocks.npz")
     else:
         print("Shocks are inconsistent")
         return None
@@ -256,52 +256,52 @@ def main():
     print("Final wage changes (including numeraire=1):", w_hat_opt)
 
     # (F) Calculate the equilibrium
-    # Pm_init = np.ones((N, J))
-    # c_hat, Pm_hat = solve_price_and_cost(
-    #     w_hat_opt,
-    #     Pm_init,
-    #     mp,
-    #     bench_shocks,
-    #     max_iter=1000,
-    #     tol=1e-7,
-    #     mute=True,
-    # )
-    # Pf_hat = calc_Pu_hat(c_hat, "f", mp, bench_shocks)
-    # pif_hat = calc_piu_hat(c_hat, Pf_hat, "f", mp, bench_shocks)
-    # pim_hat = calc_piu_hat(c_hat, Pm_hat, "m", mp, bench_shocks)
-    # Xf_prime, Xm_prime = calc_X(
-    #     w_hat_opt, pif_hat, pim_hat, mp.td, mp, bench_shocks
-    # )
+    Pm_init = np.ones((N, J))
+    c_hat, Pm_hat = solve_price_and_cost(
+        w_hat_opt,
+        Pm_init,
+        mp,
+        bench_shocks,
+        max_iter=1000,
+        tol=1e-7,
+        mute=True,
+    )
+    Pf_hat = calc_Pu_hat(c_hat, "f", mp, bench_shocks)
+    pif_hat = calc_piu_hat(c_hat, Pf_hat, "f", mp, bench_shocks)
+    pim_hat = calc_piu_hat(c_hat, Pm_hat, "m", mp, bench_shocks)
+    Xf_prime, Xm_prime = calc_X(
+        w_hat_opt, pif_hat, pim_hat, mp.td, mp, bench_shocks
+    )
 
-    # # (G) Save the results
-    # bench_sol = ModelSol(
-    #     params=mp,
-    #     shocks=bench_shocks,
-    #     w_hat=w_hat_opt,
-    #     c_hat=c_hat,
-    #     Pf_hat=Pf_hat,
-    #     Pm_hat=Pm_hat,
-    #     pif_hat=pif_hat,
-    #     pim_hat=pim_hat,
-    #     Xf_prime=Xf_prime,
-    #     Xm_prime=Xm_prime,
-    # )
-    # bench_sol.save_to_npz(f"{bench_dir}/equilibrium.npz")
-    # print("Benchmark equilibrium saved.")
+    # (G) Save the results
+    bench_sol = ModelSol(
+        params=mp,
+        shocks=bench_shocks,
+        w_hat=w_hat_opt,
+        c_hat=c_hat,
+        Pf_hat=Pf_hat,
+        Pm_hat=Pm_hat,
+        pif_hat=pif_hat,
+        pim_hat=pim_hat,
+        Xf_prime=Xf_prime,
+        Xm_prime=Xm_prime,
+    )
+    bench_sol.save_to_npz(f"{bench_dir}/numeraire1.npz")
+    print("Benchmark equilibrium saved.")
     
 
-    bench_sol = ModelSol.load_from_npz(f"{bench_dir}/equilibrium.npz", mp, bench_shocks)
+    # bench_sol = ModelSol.load_from_npz(f"{bench_dir}/equilibrium.npz", mp, bench_shocks)
 
 
 
 
     # # =========================================================================
     # # Step 3. Solve for counterfactual equilibria
-    # num = 100
+    # num_of_shocks = 100
 
     # # ========== For now, generate random shocks ==========
     # shock_list = []
-    # for i in range(num):
+    # for i in range(num_of_shocks):
     #     lambda_hat = np.random.rand(N, J) * 0.2 + 1.0
     #     df_hat = np.random.rand(N, N, J) * 0.2 + 1.0
     #     dm_hat = np.random.rand(N, N, J) * 0.2 + 1.0
@@ -317,7 +317,7 @@ def main():
     #     initargs=(mp, bench_sol, numeraire_index),
     # ) as executor:
     #     futures = []
-    #     for i in range(num):
+    #     for i in range(num_of_shocks):
     #         fut = executor.submit(
     #             run_counterfactual, i + 1, out_dir, shock_list[i]
     #         )
@@ -330,42 +330,42 @@ def main():
 
     # =========================================================================
     # Step. 4 Run simulations for different sigmas
-    num = 1
-    multipliers = [1, 2, 4]
-    sigma = 0.2
-    # sigmas = [0.1, 0.2, 0.3]
-
-    # for sigma in sigmas:
-    #     # Generate random shocks for corresponding sigma
-    #     sigma_dir = f"{out_dir}/sigma_{sigma}"
-    #     os.makedirs(sigma_dir, exist_ok=True)
-    for m in multipliers:
-        multipler_dir = f"{out_dir}/d_{m}"
-        os.makedirs(multipler_dir, exist_ok=True)
-        shock_list = []
-        for i in range(num):
-            lambda_hat = np.exp(np.random.normal(loc=0.0, scale=sigma, size=(N, J)))
+ 
+ 
+ 
+    num_of_shocks = 1
+    multipliers = [1, 2]
+    sigma = 0
+    for i in range(num_of_shocks):
+        lambda_hat = np.exp(np.random.normal(loc=0.0, scale=sigma, size=(N, J)))
+        for m in multipliers:
+            multiplier_dir = f"{out_dir}/d_{m}"
+            os.makedirs(multiplier_dir, exist_ok=True)
+            shock_list = []
             df_hat = np.ones((N, N, J)) 
-            dm_hat = np.ones((N, N, J))*m  
+            dm_hat = np.ones((N, N, J))*m
+            for i in range(N):
+                for j in range(J):
+                    dm_hat[i, i, j] == 1
             tilde_tau_prime = np.ones((N, N, J))  # No shocks on trade cost
             shock_list.append(
                 ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
             )
 
-        with ProcessPoolExecutor(
-            max_workers=os.cpu_count() - 2,
-            initializer=init_worker,
-            initargs=(mp, bench_sol, numeraire_index),
-        ) as executor:
-            futures = []
-            for i in range(num):
-                fut = executor.submit(
-                    run_counterfactual, i + 1, multipler_dir, shock_list[i]
-                )
-                futures.append(fut)
+            with ProcessPoolExecutor(
+                max_workers=os.cpu_count() - 2,
+                initializer=init_worker,
+                initargs=(mp, bench_sol, numeraire_index),
+            ) as executor:
+                futures = []
+                for i in range(num_of_shocks):
+                    fut = executor.submit(
+                        run_counterfactual, i + 1, multipler_dir, shock_list[i]
+                    )
+                    futures.append(fut)
 
-            for fut in as_completed(futures):
-                print(fut.result())
+                for fut in as_completed(futures):
+                    print(fut.result())
 
         print(f"All counterfactual equilibria for multiplier = {m} are saved.")
 
