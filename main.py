@@ -68,6 +68,11 @@ def run_counterfactual(i, out_dir, shocks):
     res = None
 
     iter_count = [0]
+
+    n = len(x0_guess)
+    eps = 1e-12  # 0に限りなく近い正の値を設定
+    bnds = [(eps, None)] * n  # 下限：eps, 上限：制限なし
+
     def callback_func(xk):
         """Callback function to check the objective value and stop the optimization."""
         iter_count[0] += 1  # Increment the iteration counter
@@ -92,6 +97,7 @@ def run_counterfactual(i, out_dir, shocks):
             # method="Nelder-Mead",
             method="L-BFGS-B",
             callback=callback_func,
+            bounds=bnds,
             options={"maxiter": 10000, "disp": False},
         )
     except EarlyStopException as e:
@@ -137,6 +143,7 @@ def run_counterfactual(i, out_dir, shocks):
         Xm_prime=Xm_prime,
     )
 
+    shocks.save_to_npz(f"{out_dir}/shocks_{i}.npz")
     sol.save_to_npz(f"{out_dir}/counterfactual_{i}.npz")
 
     return f"Counterfactual equilibrium {i} saved."
@@ -160,20 +167,22 @@ def main():
     # ===== Replace this part with loading parameters from a file =====
     data = np.load("real_data.npz")
     N, J = data["N"], data["J"]
-    mp = ModelParams(N=N, 
-                     J=J, 
-                     alpha=data["alpha"], 
-                     beta=data["beta"], 
-                     gamma=data["gamma"], 
-                     theta=data["theta"], 
-                     pif=data["pi_f"], 
-                     pim=data["pi_m"], 
-                     tilde_tau=data["tilde_tau"], 
-                     Xf=np.ones((N, J)), 
-                     Xm=np.ones((N, J)), 
-                     w0=data["VA"], 
-                     L0=np.ones_like(data["VA"]), 
-                     td=data["D"])
+    mp = ModelParams(
+        N=N,
+        J=J,
+        alpha=data["alpha"],
+        beta=data["beta"],
+        gamma=data["gamma"],
+        theta=data["theta"],
+        pif=data["pi_f"],
+        pim=data["pi_m"],
+        tilde_tau=data["tilde_tau"],
+        Xf=np.ones((N, J)),
+        Xm=np.ones((N, J)),
+        w0=data["VA"],
+        L0=np.ones_like(data["VA"]),
+        td=data["D"],
+    )
     print("Loaded the parameters from the real data")
     mp.save_to_npz(f"{out_dir}/params.npz")
     # =========================================================================
@@ -213,6 +222,11 @@ def main():
     res = None
 
     iter_count = [0]
+
+    n = len(x0_guess)
+    eps = 1e-12  # 0に限りなく近い正の値を設定
+    bnds = [(eps, None)] * n  # 下限：eps, 上限：制限なし
+
     def callback_func(xk):
         """Callback function to check the objective value and stop the optimization."""
         iter_count[0] += 1  # Increment the iteration counter
@@ -236,6 +250,7 @@ def main():
             args=(mp, bench_shocks, Xf_init, Xm_init, numeraire_index),
             # method="Nelder-Mead",
             method="L-BFGS-B",
+            bounds=bnds,
             callback=callback_func,
             options={"maxiter": 10000, "disp": True},
         )
@@ -288,12 +303,8 @@ def main():
     )
     bench_sol.save_to_npz(f"{bench_dir}/numeraire1.npz")
     print("Benchmark equilibrium saved.")
-    
 
     # bench_sol = ModelSol.load_from_npz(f"{bench_dir}/equilibrium.npz", mp, bench_shocks)
-
-
-
 
     # # =========================================================================
     # # Step 3. Solve for counterfactual equilibria
@@ -330,23 +341,23 @@ def main():
 
     # =========================================================================
     # Step. 4 Run simulations for different sigmas
- 
- 
- 
+
     num_of_shocks = 1
     multipliers = [1, 2]
     sigma = 0
     for i in range(num_of_shocks):
-        lambda_hat = np.exp(np.random.normal(loc=0.0, scale=sigma, size=(N, J)))
+        lambda_hat = np.exp(
+            np.random.normal(loc=0.0, scale=sigma, size=(N, J))
+        )
         for m in multipliers:
             multiplier_dir = f"{out_dir}/d_{m}"
             os.makedirs(multiplier_dir, exist_ok=True)
             shock_list = []
-            df_hat = np.ones((N, N, J)) 
-            dm_hat = np.ones((N, N, J))*m
+            df_hat = np.ones((N, N, J))
+            dm_hat = np.ones((N, N, J)) * m
             for i in range(N):
                 for j in range(J):
-                    dm_hat[i, i, j] == 1
+                    dm_hat[i, i, j] = 1
             tilde_tau_prime = np.ones((N, N, J))  # No shocks on trade cost
             shock_list.append(
                 ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
@@ -360,7 +371,10 @@ def main():
                 futures = []
                 for i in range(num_of_shocks):
                     fut = executor.submit(
-                        run_counterfactual, i + 1, multipler_dir, shock_list[i]
+                        run_counterfactual,
+                        i + 1,
+                        multiplier_dir,
+                        shock_list[i],
                     )
                     futures.append(fut)
 

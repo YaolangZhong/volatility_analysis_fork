@@ -10,7 +10,7 @@ def calc_c_hat(w_hat, Pm_hat, mp: ModelParams):
     given wage changes (w_hat) and intermediate input price changes (Pm_hat).
 
     Endogenous variables:
-        w_hat: (N,) array of wage changes 
+        w_hat: (N,) array of wage changes
         Pm_hat: (N, J) array of intermediate input price changes
     Returns:
         c_hat: (N, J) array of unit cost index changes
@@ -225,8 +225,6 @@ def calc_Xm_prime(
     return Xm_prime
 
 
-
-
 def calc_td_prime(
     pif_hat, pim_hat, Xf_prime, Xm_prime, mp: ModelParams, shocks: ModelShocks
 ):
@@ -356,12 +354,13 @@ def test_equations(params):
     # ...
 
 
-
 """
 $$Q_n^s \equiv \sum_{i}\frac{(\pi_{in}^{sf}X_{i}^{sf}+\pi_{in}^{sm}X_{i}^{sm})}{1+\tau^s_{in}}$$
 Then,HHI can be calculated as
 $$HHI_n=\sum_k\left(\frac{Q_n^k}{\sum_s Q_n^s}\right)^2$$
 """
+
+
 def calc_HHI(pim, pif, Xm, Xf, tau_tilde):
     """
     - pif, pim, tau_tilde: arrays of shape (i, n, s)
@@ -375,7 +374,7 @@ def calc_HHI(pim, pif, Xm, Xf, tau_tilde):
       Q_n^s = sum_{i} [ (pif[i,n,s] * Xf[i,s] + pim[i,n,s] * Xm[i,s]) / (1 + tau_tilde[i,n,s]) ]
     and then the HHI for each exporting country n is:
       HHI_n = sum_s ( Q_n^s / (sum_{s'} Q_n^{s'}) )^2.
-    
+
     Returns:
       HHI: an array of shape (n,) giving the HHI for each exporting country.
     """
@@ -385,7 +384,7 @@ def calc_HHI(pim, pif, Xm, Xf, tau_tilde):
     # For each exporting country, sum over sectors to get the total Q:
     Q_total = Q.sum(axis=1)  # shape: (N,)
     # Compute HHI for each exporting country:
-    HHI = np.sum((Q / Q_total[:, None])**2, axis=1)  # shape: (N,)
+    HHI = np.sum((Q / Q_total[:, None]) ** 2, axis=1)  # shape: (N,)
     return HHI
 
 
@@ -393,16 +392,12 @@ def calc_W(sol: ModelSol):
     Pf_hat = sol.Pf_hat
     alpha = sol.params.alpha
     w_hat = sol.w_hat
-    P_index = np.prod(Pf_hat ** alpha, axis=1)
-    W_hat = w_hat/ P_index
-    return W_hat   
-
-
+    P_index = np.prod(Pf_hat**alpha, axis=1)
+    W_hat = w_hat / P_index
+    return W_hat
 
 
 if __name__ == "__main__":
-    params = generate_test_parameters()
+    params = generate_test_parameters(2, 1)
     shocks = generate_test_shocks(params)
     test_equations(params)
-
-

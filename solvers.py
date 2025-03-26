@@ -47,14 +47,14 @@ def solve_X_prime_analytical(
 ):
     """
     X = A + B X
-    where 
+    where
         X = [vec(Xf); vec(Xm)]
         A = [Af; Am]
         B = [Bff  Bfm]
             [Bmf  Bmm]
-    
+
     In the vectorized system:
-    - Xf and Xm are originally (N, J) matrices, and when vectorized, the reshape(-1) function by default using the "C-order" 
+    - Xf and Xm are originally (N, J) matrices, and when vectorized, the reshape(-1) function by default using the "C-order"
         and they become vectors of length N*J in the order [X_11, ..., X_1J,..., X_N1,...,X_NJ].
         Therefore, X = [vec(Xf); vec(Xm)] is a vector of shape (2*N*J, ).
     - A is defined similarly: A = [vec(Af); vec(Am)], with Af and Am each of shape (N, J),
@@ -77,12 +77,12 @@ def solve_X_prime_analytical(
         # Stack vertically to form A of shape (2*N*J,)
         A = np.concatenate([Af_vec, Am_vec])
         return A
-    
+
     def calc_B():
         # --- Compute Bff  ---
         """
-        - sum_i^N {tau/(1+tau) * pif} is irrelavant to X so we first calculate this term and call the resulting matrix U, 
-        which is of the shape (N, J). 
+        - sum_i^N {tau/(1+tau) * pif} is irrelavant to X so we first calculate this term and call the resulting matrix U,
+        which is of the shape (N, J).
         - Similarly, sum_i^N {tau/(1+tau) * pim} for the case of Bfm
         - we also call mp.alpha the vector V for short
         - the vectorization of U and V is called u and v respectively
@@ -90,9 +90,9 @@ def solve_X_prime_analytical(
         """
         factorff = (shocks.tilde_tau_prime - 1) / shocks.tilde_tau_prime
         pif_prime = pif_hat * mp.pif
-        U = np.sum(factorff * pif_prime, axis=1)   # shape (N, J)
-        V = mp.alpha                               # shape (N, J)
-        u, v = U.reshape(-1), V.reshape(-1)        # shape (NJ, )
+        U = np.sum(factorff * pif_prime, axis=1)  # shape (N, J)
+        V = mp.alpha  # shape (N, J)
+        u, v = U.reshape(-1), V.reshape(-1)  # shape (NJ, )
         """
         - consider S = sum_j^J Unj*Xnj, which has shape (N, )
         - the elementwise product Unj*Xnj is computed by Du @ x where Du (NJxNJ) is the diagonalization of u
@@ -113,56 +113,54 @@ def solve_X_prime_analytical(
         # --- Compute Bfm  ---
         # only U (and therefore u and Du) is re-calculated
         pim_prime = pim_hat * mp.pim
-        U = np.sum(factorff * pim_prime, axis=1)   # shape (N, J)
+        U = np.sum(factorff * pim_prime, axis=1)  # shape (N, J)
         u = U.reshape(-1)
         Du = np.diag(u)
         Bfm = Dv @ P @ R @ Du
-            
 
         # --- Compute Bmf  ---
         """
         - let us call pif/(1+tau) the U matrix for short, and call mp.gamma the V matrix, the result matrix Z
-        - the index is then X(i,k), U(i,n,k), V(n,k,s), Z(n,s) such that 
+        - the index is then X(i,k), U(i,n,k), V(n,k,s), Z(n,s) such that
         - Z(n,s) = sum_k sum_i V(n,k,s)*U(i,n,k)*X(i,k)
         - let x=vec(X) and z=vec(Z) such that X(i,k) corresponds to the index(i-1)J+k and Z(n,s) corresponds to the index(n-1)J+s
-        - then we have z((n-1)J+s) = sum_k sum_i B(n,s)(i,k)*x((i-1)J+k) 
+        - then we have z((n-1)J+s) = sum_k sum_i B(n,s)(i,k)*x((i-1)J+k)
         - with the matrix form z = B x
         where we first have a 4-D tensor B(n,s,i,k) = V(n,k,s)*U(i,n,k)
         and then reshape into (NJ, NJ)
         """
         U = pif_prime / shocks.tilde_tau_prime
         V = mp.gamma
-        B = np.einsum('nks,ink->nsik', V, U)
-        Bmf = B.reshape((N*J, N*J))
+        B = np.einsum("nks,ink->nsik", V, U)
+        Bmf = B.reshape((N * J, N * J))
 
         # --- Compute Bmf  ---
         U = pim_prime / shocks.tilde_tau_prime
         V = mp.gamma
-        B = np.einsum('nks,ink->nsik', V, U)
-        Bmm = B.reshape((N*J, N*J))
-            
+        B = np.einsum("nks,ink->nsik", V, U)
+        Bmm = B.reshape((N * J, N * J))
+
         # --- Assemble full B ---
         # Each of Bff, Bfm, Bmf, Bmm has shape (N*J, N*J)
         # Assemble into a 2×2 block matrix:
-        B_top = np.hstack((Bff, Bfm))      # shape: (N*J, 2*N*J)
-        B_bottom = np.hstack((Bmf, Bmm))     # shape: (N*J, 2*N*J)
-        B = np.vstack((B_top, B_bottom))   # shape: (2*N*J, 2*N*J)
+        B_top = np.hstack((Bff, Bfm))  # shape: (N*J, 2*N*J)
+        B_bottom = np.hstack((Bmf, Bmm))  # shape: (N*J, 2*N*J)
+        B = np.vstack((B_top, B_bottom))  # shape: (2*N*J, 2*N*J)
         return B
-    
-    I = np.eye(2*N*J)
+
+    I = np.eye(2 * N * J)
     A_vec = calc_A()
     B_vec = calc_B()
     # Solve the linear system: (I - B_vec) * X_vec = A_vec
     X_vec = np.linalg.solve(I - B_vec, A_vec)  # X_vec will have shape (2*N*J,)
     # Now, extract Xf and Xm from X_vec. The first NJ elements correspond to Xf, and the rest to Xm
-    Xf_vec = X_vec[:N*J]
-    Xm_vec = X_vec[N*J:]
+    Xf_vec = X_vec[: N * J]
+    Xm_vec = X_vec[N * J :]
 
     # Reshape the vectors back to (N, J)
     Xf = Xf_vec.reshape(N, J)  # Final goods, shape: (N, J)
     Xm = Xm_vec.reshape(N, J)  # Intermediate goods, shape: (N, J)
     return Xf, Xm
-
 
 
 def solve_X_prime(
@@ -224,8 +222,8 @@ def solve_equilibrium(
     mp: ModelParams,
     shocks: ModelShocks,
     numeraire_index: int,
-    Xf_init: np.ndarray=None,
-    Xm_init: np.ndarray=None,
+    Xf_init: np.ndarray = None,
+    Xm_init: np.ndarray = None,
     vfactor=-0.2,
     tol=1e-3,
     max_iter=1000,
@@ -274,7 +272,9 @@ def solve_equilibrium(
         Pf_hat = calc_Pu_hat(c_hat, "f", mp, shocks)
         pif_hat = calc_piu_hat(c_hat, Pf_hat, "f", mp, shocks)
         pim_hat = calc_piu_hat(c_hat, Pm_hat, "m", mp, shocks)
-        Xf_prime, Xm_prime = solve_X_prime_analytical(w_hat, pif_hat, pim_hat, td_prime, mp, shocks)
+        Xf_prime, Xm_prime = solve_X_prime_analytical(
+            w_hat, pif_hat, pim_hat, td_prime, mp, shocks
+        )
         # Xf_prime, Xm_prime = solve_X_prime(
         #     w_hat,
         #     pif_hat,
@@ -347,3 +347,40 @@ def solve_equilibrium(
     if not mute:
         print("Failed to converge")
     return None
+
+
+if __name__ == "__main__":
+    from functions import generate_simple_params
+
+    N, J = 2, 1
+    mp = generate_simple_params()
+    lambda_hat = np.ones((N, J))
+    df_hat = np.ones((N, N, J)) * 1
+    for i in range(N):
+        for j in range(J):
+            df_hat[i, i, j] = 1
+    dm_hat = np.ones((N, N, J)) * 2
+    for i in range(N):
+        for j in range(J):
+            dm_hat[i, i, j] = 1
+    tilde_tau_prime = np.ones((N, N, J))
+
+    shocks = ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
+
+    w_hat = np.array([1.0, 1.0])
+    Pm_hat_init = np.ones((2, 1))
+    c_hat, Pm_hat = solve_price_and_cost(
+        w_hat,
+        Pm_hat_init,
+        mp,
+        shocks,
+        max_iter=1000,
+        tol=1e-6,
+        mute=False,
+    )
+
+    Pf_hat = calc_Pu_hat(c_hat, "f", mp, shocks)
+
+    print(f"c_hat: {c_hat}")
+    print(f"Pm_hat: {Pm_hat}")
+    print(f"Pf_hat: {Pf_hat}")

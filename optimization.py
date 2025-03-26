@@ -71,7 +71,7 @@ def objective_w_hat(w_hat, mp, shocks, Xf_init, Xm_init, numeraire_index=0):
     # -------------------------------------------------------------
     # 4. Return the squared sum of the differences
     # -------------------------------------------------------------
-    return np.sum(diff**2)
+    return np.max(abs(diff))  # return the maximum difference
 
 
 def objective_w_hat_reduced(

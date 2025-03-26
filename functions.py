@@ -61,7 +61,8 @@ def generate_rand_params(N: int, J: int):
     w0 = np.ones(N)  # 1
     L0 = np.ones(N) * 100 + np.random.rand(N) * 900  # 100 ~ 1000
 
-    td = np.zeros(N)
+    td = np.random.rand(N) * 10
+    td = td - td.sum() / N
 
     mp = ModelParams(
         N=N,
@@ -85,6 +86,45 @@ def generate_rand_params(N: int, J: int):
     else:
         print("Generated parameters are inconsistent.")
         return None
+
+
+def generate_simple_params():
+    """
+    generate fixed parameters for N = 2, J = 1
+    """
+    N, J = 2, 1
+    alpha = np.array([[1.0], [1.0]])
+    beta = np.array([[0.4], [0.4]])
+    gamma = np.array([[[0.6]], [[0.6]]])
+    theta = np.array([8.0])
+    pif = np.array([[[0.5], [0.5]], [[0.5], [0.5]]])
+    pim = np.array([[[0.5], [0.5]], [[0.5], [0.5]]])
+    tilde_tau = np.ones((N, N, J))
+    Xf = np.array([[500.0], [500.0]])
+    Xm = np.array([[500.0], [500.0]])
+    w0 = np.array([1.0, 1.0])
+    L0 = np.array([500.0, 500.0])
+    td = np.array([0.0, 0.0])
+
+    mp = ModelParams(
+        N=N,
+        J=J,
+        alpha=alpha,
+        beta=beta,
+        gamma=gamma,
+        theta=theta,
+        pif=pif,
+        pim=pim,
+        tilde_tau=tilde_tau,
+        Xf=Xf,
+        Xm=Xm,
+        w0=w0,
+        L0=L0,
+        td=td,
+    )
+
+    mp.check_consistency(mute=False)
+    return mp
 
 
 def generate_symmetric_params(N: int, J: int) -> ModelParams:
@@ -282,5 +322,5 @@ if __name__ == "__main__":
     J = 3
 
     # Generate symmetric parameters
-    mp = generate_symmetric_params(N, J)
+    mp = generate_simple_params()
     print(mp)
