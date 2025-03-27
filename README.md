@@ -1,24 +1,27 @@
 # Volatility Analysis
 This project analyzes how economic variables ((real/nominal) wages, price indices, expenditures,...) reacts exogenous productivity shocks and trade cost shocks. The model is an extended version of Caliendo and Parro (2015), which include (i) distinction of final goods intermediate inputs (they have different transportation costs), (ii) analysis of both productivity shocks and trade cost shocks.
 
-![Structure Image](./figures_readme/structure.png)
+![Structure Image](./figures_readme/structure.svg)
 
 ## models.py
 This file defines classes for model parameters, exogenous shocks, and model solutions. The classes are designed to handle parameter consistency checks, store data, and be used in solving the model.
 
 ### ModelParams
 ModelParams holds all the core parameters used in the model—such as the number of countries and sectors, expenditure shares, and initial values for wages and labor supply. It also provides the following methods:
-- **Consistency Checks**: Ensures parameters align with the model’s theoretical requirements (e.g., that expenditure shares sum to one).
-- **Data Storage**: Can save parameters to a file for future reference in a npz file format.
+- **check_consistency**: Function to ensures parameters align with the model’s theoretical requirements (e.g., that expenditure shares sum to one).
+- **save_to_npz**: Function to save parameters to a file for future reference in a npz file format.
+- **load_from_npz**: Function to construct this object from the data in npz file.
 
 ### ModelShocks
 ModelShocks stores exogenous shocks—specifically, productivity (lambda_hat) and trade cost shocks (df_hat, dm_hat). It includes the following methods:
-- **Consistency Checks**: Verifies that shock values are valid (e.g., positivity, self-trade is not affected by shocks, etc.).
-- **Data Storage**: Can save shock variables to a file for future reference in a npz file format.
+- **check_consistency**: Function to verify that shock values are valid (e.g., positivity, self-trade is not affected by shocks, etc.).
+- **save_to_npz**: Function to save shock variables to a file for future reference in a npz file format.
+- **load_from_npz**: Function to construct this object from the data in npz file.
 
 ### ModelSol
 ModelSol encapsulates the model’s solution results after applying the model-solving algorithm. This class contains the following methods:
-- **Data Storage**: Can save shock variables to a file for future reference in a npz file format.
+- **save_to_npz**: Function to save shock variables to a file for future reference in a npz file format.
+- **load_from_npz**: Function to construct this object from the data in npz file.
 
 ### Usage
 Usage specifies the usage of goods, final consumption or intermediate inputs. This class is used as an input for some functions (to calculate price index changes or expenditure share after the shock, final and intermediate goods sharing the functional form but using different variables)
@@ -32,7 +35,6 @@ Function to calculate unit cost change (equation (7) of the paper).
 ```math
 \hat{c}_{i}^{s} = \hat{w}_{i}^{\beta_{i}^{s}} \prod_{k=1}^{s} \left( \hat{P}_{i}^{km'} \right)^{\beta_{i}^{sk}}
 ```
-
 
 ### calc_Pu_hat
 Function to calculate price index change (equation (8) of the paper).
@@ -95,17 +97,11 @@ and updates the guess $\{ \hat{w}_n \}$ by
 
 It doesn't work for some reason, and is no longer used.
 
-## functions.py
-This file defines some utility functions.
+## equations_matrix.py
+This file contains the function to solve $X_f$ and $X_m$ by usin linear algebgra.
 
-### generate_rand_params
-Function to randomly generate parameters. Receives the number of countries and sectors and returns the ModelParams object.
-
-### <span style="color: grey; ">generate_symmetric_params</span>
-Function to randomly generate parameters, but each country should be identical. Doesn't work for some reason.
-
-### <span style="color: grey; ">generate_rand_params_without_usage</span>
-Function to randomly generate parameters, with constraint $\pi_{ni}^{s,f} = \pi_{ni}^{s,m}$.
+### calc_X
+Function to solve $\{ X_{n}^{s, f '} \}$ and $\{ X_{n}^{s, m '} \}$ by simultaneously solving equations (10) and (11). Since they are linear equations, it should be faster than using loop method in solve_X_prime in solvers.py and solve_X_prime can be replaced with it.
 
 ## optimization.py
 This file defines the objective function for the mathematical optimization, which will be used to solve the equilibrium.
@@ -116,6 +112,17 @@ Function to reconstruct a $N$-length vector of $\hat{w}_{n}$ from the $(N-1)$-le
 ### objective_w_hat_reduced
 Function to calculate the normalized trade deficit $ZW2_n$ for countries other than the numeraire country and returns the max-absolute value of the $\{ZW2_n\}$ vector. Used as the objective function for solving equilibrium.
 
-### <span style="color: grey; ">objective_w_hat</span>
-Function to calculate $ZW2_n$ for all countries (including numeraire country). No longer used.
+## functions.py
+This file defines some utility functions.
 
+### generate_rand_params
+Function to randomly generate parameters. Receives the number of countries and sectors and returns the ModelParams object.
+
+### <span style="color: grey; ">generate_simple_params</span>
+Function to construct ModelParams object with the fixed value of parameter sets. $N=2$ and $J=1$. It was used to compare the model's analytical solution and the output of Python programs here.
+
+## toy_model.py
+This file solves the model for randomly generated parameters.
+
+## main.py
+This file solves the equilibrium from the parameters read from the original data.

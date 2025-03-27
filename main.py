@@ -70,8 +70,8 @@ def run_counterfactual(shocks):
     iter_count = [0]
 
     n = len(x0_guess)
-    eps = 1e-12  # 0に限りなく近い正の値を設定
-    bnds = [(eps, None)] * n  # 下限：eps, 上限：制限なし
+    eps = 1e-12  # Positive value close to 0
+    bnds = [(eps, None)] * n  # Lower bound: eps, Upper bound: None
 
     def callback_func(xk):
         """Callback function to check the objective value and stop the optimization."""
@@ -149,19 +149,11 @@ def run_counterfactual(shocks):
 def main():
     # =========================================================================
     # Step 1. Setup and load parameters
+    # =========================================================================
     out_dir = "output"
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     os.makedirs(out_dir, exist_ok=True)
 
-    # ========== For now, generate random parameters ==========
-    # N, J = 5, 3
-    # mp = generate_rand_params(N, J)
-    # if mp is None:
-    #     print("Failed to generate random parameters")
-    #     return None
-    # else:
-    #     mp.save_to_npz(f"{out_dir}/model_params.npz")
-    # ===== Replace this part with loading parameters from a file =====
     # data = np.load("real_data.npz")
     data = np.load("real_data_2017.npz")
     N, J = data["N"], data["J"]
@@ -184,10 +176,9 @@ def main():
     print("Loaded the parameters from the real data")
     mp.save_to_npz(f"{out_dir}/params.npz")
 
-
-
     # =========================================================================
     # Step 2. Solve for the benchmark equilibrium
+    # =========================================================================
     bench_dir = f"{out_dir}/benchmark"
     os.makedirs(bench_dir, exist_ok=True)
 
@@ -306,37 +297,52 @@ def main():
     # print("Benchmark equilibrium saved.")
 
     bench_shocks = ModelShocks.load_from_npz(f"{bench_dir}/shocks.npz", mp)
-    bench_sol = ModelSol.load_from_npz(f"{bench_dir}/numeraire1.npz", mp, bench_shocks)
+    bench_sol = ModelSol.load_from_npz(
+        f"{bench_dir}/numeraire1.npz", mp, bench_shocks
+    )
 
-
+    # =========================================================================
+    # Step 3. Run counterfactuals
+    # =========================================================================
     shocks_types = ["country", "sector", "idiosyncratic"]
     num_of_shocks = 10
     multipliers = [1, 2]
     sigma = 0.2
-    counterfactual_dir = "output/counterfactual" 
-
+    counterfactual_dir = "output/counterfactual"
 
     for shock_type in shocks_types:
-
+        # ---------------------------------------------------------------------
+        # Generate lambda shocks
+        # ---------------------------------------------------------------------
         if shock_type == "country":
             # For country-based shocks: one shock per country (shape: (num_of_shocks, N))
             # Then replicate it across sectors to get a final shape of (num_of_shocks, N, J)
-            simulated_shocks = np.random.normal(loc=0.0, scale=sigma, size=(num_of_shocks, N))
+            simulated_shocks = np.random.normal(
+                loc=0.0, scale=sigma, size=(num_of_shocks, N)
+            )
             lambda_hat_batch = np.exp(simulated_shocks)[:, :, np.newaxis]
             lambda_hat_batch = np.repeat(lambda_hat_batch, J, axis=2)
         elif shock_type == "sector":
             # For sector-based shocks: one shock per sector (shape: (num_of_shocks, J))
             # Then replicate it across countries to get a final shape of (num_of_shocks, N, J)
-            simulated_shocks = np.random.normal(loc=0.0, scale=sigma, size=(num_of_shocks, J))
+            simulated_shocks = np.random.normal(
+                loc=0.0, scale=sigma, size=(num_of_shocks, J)
+            )
             lambda_hat_batch = np.exp(simulated_shocks)[:, np.newaxis, :]
             lambda_hat_batch = np.repeat(lambda_hat_batch, N, axis=1)
         elif shock_type == "idiosyncratic":
             # For idiosyncratic shocks: independent shock for each (country, sector)
             # Shape is directly (num_of_shocks, N, J)
-            simulated_shocks = np.random.normal(loc=0.0, scale=sigma, size=(num_of_shocks, N, J))
+            simulated_shocks = np.random.normal(
+                loc=0.0, scale=sigma, size=(num_of_shocks, N, J)
+            )
             lambda_hat_batch = np.exp(simulated_shocks)
 
+        # ---------------------------------------------------------------------
+        # Run counterfactuals for different dm shocks
+        # ---------------------------------------------------------------------
         for m in multipliers:
+            # Generate dm shocks
             df_hat = np.ones((N, N, J))
             dm_hat = np.ones((N, N, J)) * m
             for i in range(N):
@@ -349,26 +355,41 @@ def main():
             os.makedirs(dir, exist_ok=True)
             shock_list = []
 
+            # Construct ModelShocks objects
             for i in range(num_of_shocks):
                 lambda_hat = lambda_hat_batch[i, :, :]
-                shock = ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
+                shock = ModelShocks(
+                    mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime
+                )
                 shock_list.append(shock)
-            
+
+            # Run counterfactuals in parallel
             with ProcessPoolExecutor(
                 max_workers=os.cpu_count() - 2,
                 initializer=init_worker,
                 initargs=(mp, bench_sol, numeraire_index),
             ) as executor:
-                futures = [executor.submit(run_counterfactual, shock) for shock in shock_list]
+                futures = [
+                    executor.submit(run_counterfactual, shock)
+                    for shock in shock_list
+                ]
                 for i, fut in enumerate(as_completed(futures)):
                     sol = fut.result()
                     # the save_start_idx is the number of existing results
                     save_start_idx = 0
 
-                    shock_list[i].save_to_npz(os.path.join(dir, f"result_{i+save_start_idx}_shock.npz"))
-                    sol.save_to_npz(os.path.join(dir, f"result_{i+save_start_idx}_sol.npz"))
+                    shock_list[i].save_to_npz(
+                        os.path.join(
+                            dir, f"result_{i+save_start_idx}_shock.npz"
+                        )
+                    )
+                    sol.save_to_npz(
+                        os.path.join(dir, f"result_{i+save_start_idx}_sol.npz")
+                    )
 
-                    print(f"Counterfactual equilibria for {shock_type} shock, dm = {m}, shock index {i} are saved.")
+                    print(
+                        f"Counterfactual equilibria for {shock_type} shock, dm = {m}, shock index {i} are saved."
+                    )
 
 
 if __name__ == "__main__":

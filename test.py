@@ -354,7 +354,7 @@ def main():
             dm_hat = np.ones((N, N, J)) * m
             for i in range(N):
                 for j in range(J):
-                    dm_hat[i, i, j] == 1
+                    dm_hat[i, i, j] = 1
             tilde_tau_prime = np.ones((N, N, J))  # No shocks on tariffs
             shock_list.append(
                 ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)

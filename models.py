@@ -354,10 +354,10 @@ class ModelParams(object):
     def load_from_npz(cls, filename: str) -> "ModelParams":
         """
         Load model parameters from a .npz file and return a ModelParams instance.
-        
+
         The .npz file must contain the keys:
-          'N', 'J', 'alpha', 'beta', 'gamma', 'theta',
-          'pif', 'pim', 'tilde_tau', 'Xf', 'Xm', 'w0', 'L0', 'td'
+            'N', 'J', 'alpha', 'beta', 'gamma', 'theta',
+            'pif', 'pim', 'tilde_tau', 'Xf', 'Xm', 'w0', 'L0', 'td'
         """
         data = np.load(filename, allow_pickle=True)
         # Make sure to extract values from data.
@@ -375,8 +375,23 @@ class ModelParams(object):
         w0 = data["w0"]
         L0 = data["L0"]
         td = data["td"]
-        
-        return cls(N, J, alpha, beta, gamma, theta, pif, pim, tilde_tau, Xf, Xm, w0, L0, td)
+
+        return cls(
+            N,
+            J,
+            alpha,
+            beta,
+            gamma,
+            theta,
+            pif,
+            pim,
+            tilde_tau,
+            Xf,
+            Xm,
+            w0,
+            L0,
+            td,
+        )
 
 
 class ModelShocks(object):
@@ -552,18 +567,20 @@ class ModelShocks(object):
         )
 
     @classmethod
-    def load_from_npz(cls, filename: str, params: ModelParams) -> "ModelShocks":
+    def load_from_npz(
+        cls, filename: str, params: ModelParams
+    ) -> "ModelShocks":
         """
         Load model shocks from a .npz file and return a ModelShocks instance.
 
         Parameters:
-          filename : str
-              The path to the .npz file.
-          params : ModelParams
-              The ModelParams instance associated with these shocks.
+            filename : str
+                The path to the .npz file.
+            params : ModelParams
+                The ModelParams instance associated with these shocks.
 
         Returns:
-          An instance of ModelShocks with the loaded data.
+            An instance of ModelShocks with the loaded data.
         """
         data = np.load(filename, allow_pickle=True)
         lambda_hat = data["lambda_hat"]
@@ -571,6 +588,7 @@ class ModelShocks(object):
         dm_hat = data["dm_hat"]
         tilde_tau_prime = data["tilde_tau_prime"]
         return cls(params, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
+
 
 class ModelSol(object):
     def __init__(
@@ -642,12 +660,14 @@ class ModelSol(object):
         )
 
     @classmethod
-    def load_from_npz(cls, filename: str, params: ModelParams, shocks: ModelShocks) -> "ModelSol":
+    def load_from_npz(
+        cls, filename: str, params: ModelParams, shocks: ModelShocks
+    ) -> "ModelSol":
         """
         Load a model solution from a .npz file and return a ModelSol instance.
         This function assumes that the npz file contains the following keys:
-          'params', 'shocks', 'w_hat', 'c_hat', 'Pf_hat', 'Pm_hat',
-          'pif_hat', 'pim_hat', 'Xf_prime', 'Xm_prime'
+            'params', 'shocks', 'w_hat', 'c_hat', 'Pf_hat', 'Pm_hat',
+            'pif_hat', 'pim_hat', 'Xf_prime', 'Xm_prime'
         """
         data = np.load(filename, allow_pickle=True)
         # If the parameters and shocks were saved, load them;
@@ -663,7 +683,19 @@ class ModelSol(object):
         Xf_prime = data["Xf_prime"]
         Xm_prime = data["Xm_prime"]
 
-        return cls(params, shocks, w_hat, c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, Xf_prime, Xm_prime)
+        return cls(
+            params,
+            shocks,
+            w_hat,
+            c_hat,
+            Pf_hat,
+            Pm_hat,
+            pif_hat,
+            pim_hat,
+            Xf_prime,
+            Xm_prime,
+        )
+
 
 class Usage(Enum):
     """
@@ -716,10 +748,10 @@ def main():
 
 
 def compute_W(w_hat, Pf_hat, alpha):
-    
-    P_index = np.prod(Pf_hat ** alpha, axis=1)
-    W_hat = w_hat/ P_index
-    
+
+    P_index = np.prod(Pf_hat**alpha, axis=1)
+    W_hat = w_hat / P_index
+
     return W_hat
 
 
