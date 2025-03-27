@@ -32,7 +32,7 @@ def init_worker(mp, bench_sol, numeraire_index):
     GLOBAL_numeraire_index = numeraire_index
 
 
-def run_counterfactual(i, out_dir, shocks):
+def run_counterfactual(shocks):
     """
     Solve i-th counterfactual equilibrium.
 
@@ -143,10 +143,7 @@ def run_counterfactual(i, out_dir, shocks):
         Xm_prime=Xm_prime,
     )
 
-    shocks.save_to_npz(f"{out_dir}/shocks_{i}.npz")
-    sol.save_to_npz(f"{out_dir}/counterfactual_{i}.npz")
-
-    return f"Counterfactual equilibrium {i} saved."
+    return sol
 
 
 def main():
@@ -165,7 +162,8 @@ def main():
     # else:
     #     mp.save_to_npz(f"{out_dir}/model_params.npz")
     # ===== Replace this part with loading parameters from a file =====
-    data = np.load("real_data.npz")
+    # data = np.load("real_data.npz")
+    data = np.load("real_data_2017.npz")
     N, J = data["N"], data["J"]
     mp = ModelParams(
         N=N,
@@ -185,6 +183,9 @@ def main():
     )
     print("Loaded the parameters from the real data")
     mp.save_to_npz(f"{out_dir}/params.npz")
+
+
+
     # =========================================================================
     # Step 2. Solve for the benchmark equilibrium
     bench_dir = f"{out_dir}/benchmark"
@@ -192,196 +193,182 @@ def main():
 
     numeraire_index = 0
 
-    # Generate shocks for the benchmark equilibrium
-    # For benchmark, set all shocks to 1 (no shocks)
-    lambda_hat = np.ones((N, J))
-    df_hat = np.ones((N, N, J))
-    dm_hat = np.ones((N, N, J))
-    tilde_tau_prime = np.ones((N, N, J))
+    # # Generate shocks for the benchmark equilibrium
+    # # For benchmark, set all shocks to 1 (no shocks)
+    # lambda_hat = np.ones((N, J))
+    # df_hat = np.ones((N, N, J))
+    # dm_hat = np.ones((N, N, J))
+    # tilde_tau_prime = np.ones((N, N, J))
 
-    bench_shocks = ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
-    if bench_shocks.check_consistency():
-        bench_shocks.save_to_npz(f"{bench_dir}/shocks.npz")
-    else:
-        print("Shocks are inconsistent")
-        return None
+    # bench_shocks = ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
+    # if bench_shocks.check_consistency():
+    #     bench_shocks.save_to_npz(f"{bench_dir}/shocks.npz")
+    # else:
+    #     print("Shocks are inconsistent")
+    #     return None
 
-    # ----------------------------------------------------
-    # Setup for optimization
-    # ----------------------------------------------------
-    Xf_init = mp.Xf.copy()
-    Xm_init = mp.Xm.copy()
+    # # ----------------------------------------------------
+    # # Setup for optimization
+    # # ----------------------------------------------------
+    # Xf_init = mp.Xf.copy()
+    # Xm_init = mp.Xm.copy()
 
-    # (A) Dimention of the optimization problem is N-1
-    dim_reduced = N - 1
-    # Initial guess for the reduced problem
-    x0_guess = np.ones(dim_reduced)
+    # # (A) Dimention of the optimization problem is N-1
+    # dim_reduced = N - 1
+    # # Initial guess for the reduced problem
+    # x0_guess = np.ones(dim_reduced)
 
-    # (B) Example of early stop with callback
-    best_x = [None]
-    res = None
+    # # (B) Example of early stop with callback
+    # best_x = [None]
+    # res = None
 
-    iter_count = [0]
+    # iter_count = [0]
 
-    n = len(x0_guess)
-    eps = 1e-12  # 0に限りなく近い正の値を設定
-    bnds = [(eps, None)] * n  # 下限：eps, 上限：制限なし
+    # n = len(x0_guess)
+    # eps = 1e-12  # 0に限りなく近い正の値を設定
+    # bnds = [(eps, None)] * n  # 下限：eps, 上限：制限なし
 
-    def callback_func(xk):
-        """Callback function to check the objective value and stop the optimization."""
-        iter_count[0] += 1  # Increment the iteration counter
-        val = objective_w_hat_reduced(
-            xk, mp, bench_shocks, Xf_init, Xm_init, numeraire_index
-        )
-        # Print the current loss value for each iteration
-        print(f"Iteration {iter_count[0]}: loss = {val}")
-        threshold = 1e-6
-        if val < threshold:
-            best_x[0] = xk.copy()
-            raise EarlyStopException(
-                f"Residual {val} < threshold {threshold}. Early stopping."
-            )
-
-    try:
-        # (C) Optimize w_hat by using Nelder-Mead method
-        res = minimize(
-            objective_w_hat_reduced,
-            x0_guess,
-            args=(mp, bench_shocks, Xf_init, Xm_init, numeraire_index),
-            # method="Nelder-Mead",
-            method="L-BFGS-B",
-            bounds=bnds,
-            callback=callback_func,
-            options={"maxiter": 10000, "disp": True},
-        )
-    except EarlyStopException as e:
-        print("Early stop triggered:", e)
-
-    # (D) Extract the solution: res is the official solution
-    if res is not None and hasattr(res, "x"):
-        print("Optimization finished. Scipy result:")
-        print(res)
-        x_reduced_opt = res.x
-    else:
-        # If res is None, use the best solution so far
-        x_reduced_opt = best_x[0]
-
-    # (E) Reconstruct w_hat (numeraire is automatically set to 1)
-    w_hat_opt = reconstruct_w_hat(x_reduced_opt, numeraire_index, N)
-    print("Final wage changes (including numeraire=1):", w_hat_opt)
-
-    # (F) Calculate the equilibrium
-    Pm_init = np.ones((N, J))
-    c_hat, Pm_hat = solve_price_and_cost(
-        w_hat_opt,
-        Pm_init,
-        mp,
-        bench_shocks,
-        max_iter=1000,
-        tol=1e-7,
-        mute=True,
-    )
-    Pf_hat = calc_Pu_hat(c_hat, "f", mp, bench_shocks)
-    pif_hat = calc_piu_hat(c_hat, Pf_hat, "f", mp, bench_shocks)
-    pim_hat = calc_piu_hat(c_hat, Pm_hat, "m", mp, bench_shocks)
-    Xf_prime, Xm_prime = calc_X(
-        w_hat_opt, pif_hat, pim_hat, mp.td, mp, bench_shocks
-    )
-
-    # (G) Save the results
-    bench_sol = ModelSol(
-        params=mp,
-        shocks=bench_shocks,
-        w_hat=w_hat_opt,
-        c_hat=c_hat,
-        Pf_hat=Pf_hat,
-        Pm_hat=Pm_hat,
-        pif_hat=pif_hat,
-        pim_hat=pim_hat,
-        Xf_prime=Xf_prime,
-        Xm_prime=Xm_prime,
-    )
-    bench_sol.save_to_npz(f"{bench_dir}/numeraire1.npz")
-    print("Benchmark equilibrium saved.")
-
-    # bench_sol = ModelSol.load_from_npz(f"{bench_dir}/equilibrium.npz", mp, bench_shocks)
-
-    # # =========================================================================
-    # # Step 3. Solve for counterfactual equilibria
-    # num_of_shocks = 100
-
-    # # ========== For now, generate random shocks ==========
-    # shock_list = []
-    # for i in range(num_of_shocks):
-    #     lambda_hat = np.random.rand(N, J) * 0.2 + 1.0
-    #     df_hat = np.random.rand(N, N, J) * 0.2 + 1.0
-    #     dm_hat = np.random.rand(N, N, J) * 0.2 + 1.0
-    #     tilde_tau_prime = np.random.rand(N, N, J) * 0.2 + 1.0
-    #     shock_list.append(
-    #         ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
+    # def callback_func(xk):
+    #     """Callback function to check the objective value and stop the optimization."""
+    #     iter_count[0] += 1  # Increment the iteration counter
+    #     val = objective_w_hat_reduced(
+    #         xk, mp, bench_shocks, Xf_init, Xm_init, numeraire_index
     #     )
-    # # ========== Replace this part with generating shocks from estimated parameters ==========
-
-    # with ProcessPoolExecutor(
-    #     max_workers=os.cpu_count() - 2,
-    #     initializer=init_worker,
-    #     initargs=(mp, bench_sol, numeraire_index),
-    # ) as executor:
-    #     futures = []
-    #     for i in range(num_of_shocks):
-    #         fut = executor.submit(
-    #             run_counterfactual, i + 1, out_dir, shock_list[i]
+    #     # Print the current loss value for each iteration
+    #     print(f"Iteration {iter_count[0]}: loss = {val}")
+    #     threshold = 1e-6
+    #     if val < threshold:
+    #         best_x[0] = xk.copy()
+    #         raise EarlyStopException(
+    #             f"Residual {val} < threshold {threshold}. Early stopping."
     #         )
-    #         futures.append(fut)
 
-    #     for fut in as_completed(futures):
-    #         print(fut.result())
+    # try:
+    #     # (C) Optimize w_hat by using Nelder-Mead method
+    #     res = minimize(
+    #         objective_w_hat_reduced,
+    #         x0_guess,
+    #         args=(mp, bench_shocks, Xf_init, Xm_init, numeraire_index),
+    #         # method="Nelder-Mead",
+    #         method="L-BFGS-B",
+    #         bounds=bnds,
+    #         callback=callback_func,
+    #         options={"maxiter": 10000, "disp": True},
+    #     )
+    # except EarlyStopException as e:
+    #     print("Early stop triggered:", e)
 
-    # print("All counterfactual equilibria are solved.")
+    # # (D) Extract the solution: res is the official solution
+    # if res is not None and hasattr(res, "x"):
+    #     print("Optimization finished. Scipy result:")
+    #     print(res)
+    #     x_reduced_opt = res.x
+    # else:
+    #     # If res is None, use the best solution so far
+    #     x_reduced_opt = best_x[0]
 
-    # =========================================================================
-    # Step. 4 Run simulations for different sigmas
+    # # (E) Reconstruct w_hat (numeraire is automatically set to 1)
+    # w_hat_opt = reconstruct_w_hat(x_reduced_opt, numeraire_index, N)
+    # print("Final wage changes (including numeraire=1):", w_hat_opt)
 
-    num_of_shocks = 1
+    # # (F) Calculate the equilibrium
+    # Pm_init = np.ones((N, J))
+    # c_hat, Pm_hat = solve_price_and_cost(
+    #     w_hat_opt,
+    #     Pm_init,
+    #     mp,
+    #     bench_shocks,
+    #     max_iter=1000,
+    #     tol=1e-7,
+    #     mute=True,
+    # )
+    # Pf_hat = calc_Pu_hat(c_hat, "f", mp, bench_shocks)
+    # pif_hat = calc_piu_hat(c_hat, Pf_hat, "f", mp, bench_shocks)
+    # pim_hat = calc_piu_hat(c_hat, Pm_hat, "m", mp, bench_shocks)
+    # Xf_prime, Xm_prime = calc_X(
+    #     w_hat_opt, pif_hat, pim_hat, mp.td, mp, bench_shocks
+    # )
+
+    # # (G) Save the results
+    # bench_sol = ModelSol(
+    #     params=mp,
+    #     shocks=bench_shocks,
+    #     w_hat=w_hat_opt,
+    #     c_hat=c_hat,
+    #     Pf_hat=Pf_hat,
+    #     Pm_hat=Pm_hat,
+    #     pif_hat=pif_hat,
+    #     pim_hat=pim_hat,
+    #     Xf_prime=Xf_prime,
+    #     Xm_prime=Xm_prime,
+    # )
+    # bench_sol.save_to_npz(f"{bench_dir}/numeraire1.npz")
+    # print("Benchmark equilibrium saved.")
+
+    bench_shocks = ModelShocks.load_from_npz(f"{bench_dir}/shocks.npz", mp)
+    bench_sol = ModelSol.load_from_npz(f"{bench_dir}/numeraire1.npz", mp, bench_shocks)
+
+
+    shocks_types = ["country", "sector", "idiosyncratic"]
+    num_of_shocks = 10
     multipliers = [1, 2]
-    sigma = 0
-    for i in range(num_of_shocks):
-        lambda_hat = np.exp(
-            np.random.normal(loc=0.0, scale=sigma, size=(N, J))
-        )
+    sigma = 0.2
+    counterfactual_dir = "output/counterfactual" 
+
+
+    for shock_type in shocks_types:
+
+        if shock_type == "country":
+            # For country-based shocks: one shock per country (shape: (num_of_shocks, N))
+            # Then replicate it across sectors to get a final shape of (num_of_shocks, N, J)
+            simulated_shocks = np.random.normal(loc=0.0, scale=sigma, size=(num_of_shocks, N))
+            lambda_hat_batch = np.exp(simulated_shocks)[:, :, np.newaxis]
+            lambda_hat_batch = np.repeat(lambda_hat_batch, J, axis=2)
+        elif shock_type == "sector":
+            # For sector-based shocks: one shock per sector (shape: (num_of_shocks, J))
+            # Then replicate it across countries to get a final shape of (num_of_shocks, N, J)
+            simulated_shocks = np.random.normal(loc=0.0, scale=sigma, size=(num_of_shocks, J))
+            lambda_hat_batch = np.exp(simulated_shocks)[:, np.newaxis, :]
+            lambda_hat_batch = np.repeat(lambda_hat_batch, N, axis=1)
+        elif shock_type == "idiosyncratic":
+            # For idiosyncratic shocks: independent shock for each (country, sector)
+            # Shape is directly (num_of_shocks, N, J)
+            simulated_shocks = np.random.normal(loc=0.0, scale=sigma, size=(num_of_shocks, N, J))
+            lambda_hat_batch = np.exp(simulated_shocks)
+
         for m in multipliers:
-            multiplier_dir = f"{out_dir}/d_{m}"
-            os.makedirs(multiplier_dir, exist_ok=True)
-            shock_list = []
             df_hat = np.ones((N, N, J))
             dm_hat = np.ones((N, N, J)) * m
             for i in range(N):
                 for j in range(J):
                     dm_hat[i, i, j] = 1
             tilde_tau_prime = np.ones((N, N, J))  # No shocks on trade cost
-            shock_list.append(
-                ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
-            )
 
+            rel_path = "_".join((shock_type, f"dm_{m}"))
+            dir = os.path.join(counterfactual_dir, rel_path)
+            os.makedirs(dir, exist_ok=True)
+            shock_list = []
+
+            for i in range(num_of_shocks):
+                lambda_hat = lambda_hat_batch[i, :, :]
+                shock = ModelShocks(mp, lambda_hat, df_hat, dm_hat, tilde_tau_prime)
+                shock_list.append(shock)
+            
             with ProcessPoolExecutor(
                 max_workers=os.cpu_count() - 2,
                 initializer=init_worker,
                 initargs=(mp, bench_sol, numeraire_index),
             ) as executor:
-                futures = []
-                for i in range(num_of_shocks):
-                    fut = executor.submit(
-                        run_counterfactual,
-                        i + 1,
-                        multiplier_dir,
-                        shock_list[i],
-                    )
-                    futures.append(fut)
+                futures = [executor.submit(run_counterfactual, shock) for shock in shock_list]
+                for i, fut in enumerate(as_completed(futures)):
+                    sol = fut.result()
+                    # the save_start_idx is the number of existing results
+                    save_start_idx = 0
 
-                for fut in as_completed(futures):
-                    print(fut.result())
+                    shock_list[i].save_to_npz(os.path.join(dir, f"result_{i+save_start_idx}_shock.npz"))
+                    sol.save_to_npz(os.path.join(dir, f"result_{i+save_start_idx}_sol.npz"))
 
-        print(f"All counterfactual equilibria for multiplier = {m} are saved.")
+                    print(f"Counterfactual equilibria for {shock_type} shock, dm = {m}, shock index {i} are saved.")
 
 
 if __name__ == "__main__":
