@@ -1,11 +1,12 @@
 import numpy as np
-from solvers import solve_price_and_cost, solve_X_prime
+from solvers import solve_price_and_cost
 from equations import (
     calc_Pu_hat,
     calc_piu_hat,
     calc_td_prime,
+    calc_X
 )
-from equations_matrix import calc_X
+
 
 
 # Old objective function (no longer used)
