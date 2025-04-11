@@ -3,7 +3,7 @@ import numpy as np
 import time
 from models import ModelParams, ModelShocks, ModelSol
 from equations import calc_Pu_hat, calc_piu_hat, calc_W
-from equations_matrix import calc_X
+from equations_autograd import calc_X
 from solvers import solve_price_and_cost
 from functions import generate_rand_params, generate_simple_params
 from optimization import reconstruct_w_hat, objective_w_hat_reduced
