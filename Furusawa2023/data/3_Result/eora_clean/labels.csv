@@ -1,0 +1,926 @@
+,Country,Sector
+0,AUS,Agriculture
+1,AUS,Fishing
+2,AUS,Mining and Quarrying
+3,AUS,Food & Beverages
+4,AUS,Textiles and Wearing Apparel
+5,AUS,Wood and Paper
+6,AUS,"Petroleum, Chemical and Non-Metallic Mineral Products"
+7,AUS,Metal Products
+8,AUS,Electrical and Machinery
+9,AUS,Transport Equipment
+10,AUS,Other Manufacturing
+11,AUS,Recycling
+12,AUS,"Electricity, Gas and Water"
+13,AUS,Construction
+14,AUS,Maintenance and Repair
+15,AUS,Wholesale Trade
+16,AUS,Retail Trade
+17,AUS,Hotels and Restraurants
+18,AUS,Transport
+19,AUS,Post and Telecommunications
+20,AUS,Finacial Intermediation and Business Activities
+21,AUS,Public Administration
+22,AUS,"Education, Health and Other Services"
+23,AUS,Private Households
+24,AUS,Others
+25,AUT,Agriculture
+26,AUT,Fishing
+27,AUT,Mining and Quarrying
+28,AUT,Food & Beverages
+29,AUT,Textiles and Wearing Apparel
+30,AUT,Wood and Paper
+31,AUT,"Petroleum, Chemical and Non-Metallic Mineral Products"
+32,AUT,Metal Products
+33,AUT,Electrical and Machinery
+34,AUT,Transport Equipment
+35,AUT,Other Manufacturing
+36,AUT,Recycling
+37,AUT,"Electricity, Gas and Water"
+38,AUT,Construction
+39,AUT,Maintenance and Repair
+40,AUT,Wholesale Trade
+41,AUT,Retail Trade
+42,AUT,Hotels and Restraurants
+43,AUT,Transport
+44,AUT,Post and Telecommunications
+45,AUT,Finacial Intermediation and Business Activities
+46,AUT,Public Administration
+47,AUT,"Education, Health and Other Services"
+48,AUT,Private Households
+49,AUT,Others
+50,BEL,Agriculture
+51,BEL,Fishing
+52,BEL,Mining and Quarrying
+53,BEL,Food & Beverages
+54,BEL,Textiles and Wearing Apparel
+55,BEL,Wood and Paper
+56,BEL,"Petroleum, Chemical and Non-Metallic Mineral Products"
+57,BEL,Metal Products
+58,BEL,Electrical and Machinery
+59,BEL,Transport Equipment
+60,BEL,Other Manufacturing
+61,BEL,Recycling
+62,BEL,"Electricity, Gas and Water"
+63,BEL,Construction
+64,BEL,Maintenance and Repair
+65,BEL,Wholesale Trade
+66,BEL,Retail Trade
+67,BEL,Hotels and Restraurants
+68,BEL,Transport
+69,BEL,Post and Telecommunications
+70,BEL,Finacial Intermediation and Business Activities
+71,BEL,Public Administration
+72,BEL,"Education, Health and Other Services"
+73,BEL,Private Households
+74,BEL,Others
+75,BRA,Agriculture
+76,BRA,Fishing
+77,BRA,Mining and Quarrying
+78,BRA,Food & Beverages
+79,BRA,Textiles and Wearing Apparel
+80,BRA,Wood and Paper
+81,BRA,"Petroleum, Chemical and Non-Metallic Mineral Products"
+82,BRA,Metal Products
+83,BRA,Electrical and Machinery
+84,BRA,Transport Equipment
+85,BRA,Other Manufacturing
+86,BRA,Recycling
+87,BRA,"Electricity, Gas and Water"
+88,BRA,Construction
+89,BRA,Maintenance and Repair
+90,BRA,Wholesale Trade
+91,BRA,Retail Trade
+92,BRA,Hotels and Restraurants
+93,BRA,Transport
+94,BRA,Post and Telecommunications
+95,BRA,Finacial Intermediation and Business Activities
+96,BRA,Public Administration
+97,BRA,"Education, Health and Other Services"
+98,BRA,Private Households
+99,BRA,Others
+100,BGR,Agriculture
+101,BGR,Fishing
+102,BGR,Mining and Quarrying
+103,BGR,Food & Beverages
+104,BGR,Textiles and Wearing Apparel
+105,BGR,Wood and Paper
+106,BGR,"Petroleum, Chemical and Non-Metallic Mineral Products"
+107,BGR,Metal Products
+108,BGR,Electrical and Machinery
+109,BGR,Transport Equipment
+110,BGR,Other Manufacturing
+111,BGR,Recycling
+112,BGR,"Electricity, Gas and Water"
+113,BGR,Construction
+114,BGR,Maintenance and Repair
+115,BGR,Wholesale Trade
+116,BGR,Retail Trade
+117,BGR,Hotels and Restraurants
+118,BGR,Transport
+119,BGR,Post and Telecommunications
+120,BGR,Finacial Intermediation and Business Activities
+121,BGR,Public Administration
+122,BGR,"Education, Health and Other Services"
+123,BGR,Private Households
+124,BGR,Others
+125,CAN,Agriculture
+126,CAN,Fishing
+127,CAN,Mining and Quarrying
+128,CAN,Food & Beverages
+129,CAN,Textiles and Wearing Apparel
+130,CAN,Wood and Paper
+131,CAN,"Petroleum, Chemical and Non-Metallic Mineral Products"
+132,CAN,Metal Products
+133,CAN,Electrical and Machinery
+134,CAN,Transport Equipment
+135,CAN,Other Manufacturing
+136,CAN,Recycling
+137,CAN,"Electricity, Gas and Water"
+138,CAN,Construction
+139,CAN,Maintenance and Repair
+140,CAN,Wholesale Trade
+141,CAN,Retail Trade
+142,CAN,Hotels and Restraurants
+143,CAN,Transport
+144,CAN,Post and Telecommunications
+145,CAN,Finacial Intermediation and Business Activities
+146,CAN,Public Administration
+147,CAN,"Education, Health and Other Services"
+148,CAN,Private Households
+149,CAN,Others
+150,CHN,Agriculture
+151,CHN,Fishing
+152,CHN,Mining and Quarrying
+153,CHN,Food & Beverages
+154,CHN,Textiles and Wearing Apparel
+155,CHN,Wood and Paper
+156,CHN,"Petroleum, Chemical and Non-Metallic Mineral Products"
+157,CHN,Metal Products
+158,CHN,Electrical and Machinery
+159,CHN,Transport Equipment
+160,CHN,Other Manufacturing
+161,CHN,Recycling
+162,CHN,"Electricity, Gas and Water"
+163,CHN,Construction
+164,CHN,Maintenance and Repair
+165,CHN,Wholesale Trade
+166,CHN,Retail Trade
+167,CHN,Hotels and Restraurants
+168,CHN,Transport
+169,CHN,Post and Telecommunications
+170,CHN,Finacial Intermediation and Business Activities
+171,CHN,Public Administration
+172,CHN,"Education, Health and Other Services"
+173,CHN,Private Households
+174,CHN,Others
+175,CZE,Agriculture
+176,CZE,Fishing
+177,CZE,Mining and Quarrying
+178,CZE,Food & Beverages
+179,CZE,Textiles and Wearing Apparel
+180,CZE,Wood and Paper
+181,CZE,"Petroleum, Chemical and Non-Metallic Mineral Products"
+182,CZE,Metal Products
+183,CZE,Electrical and Machinery
+184,CZE,Transport Equipment
+185,CZE,Other Manufacturing
+186,CZE,Recycling
+187,CZE,"Electricity, Gas and Water"
+188,CZE,Construction
+189,CZE,Maintenance and Repair
+190,CZE,Wholesale Trade
+191,CZE,Retail Trade
+192,CZE,Hotels and Restraurants
+193,CZE,Transport
+194,CZE,Post and Telecommunications
+195,CZE,Finacial Intermediation and Business Activities
+196,CZE,Public Administration
+197,CZE,"Education, Health and Other Services"
+198,CZE,Private Households
+199,CZE,Others
+200,DNK,Agriculture
+201,DNK,Fishing
+202,DNK,Mining and Quarrying
+203,DNK,Food & Beverages
+204,DNK,Textiles and Wearing Apparel
+205,DNK,Wood and Paper
+206,DNK,"Petroleum, Chemical and Non-Metallic Mineral Products"
+207,DNK,Metal Products
+208,DNK,Electrical and Machinery
+209,DNK,Transport Equipment
+210,DNK,Other Manufacturing
+211,DNK,Recycling
+212,DNK,"Electricity, Gas and Water"
+213,DNK,Construction
+214,DNK,Maintenance and Repair
+215,DNK,Wholesale Trade
+216,DNK,Retail Trade
+217,DNK,Hotels and Restraurants
+218,DNK,Transport
+219,DNK,Post and Telecommunications
+220,DNK,Finacial Intermediation and Business Activities
+221,DNK,Public Administration
+222,DNK,"Education, Health and Other Services"
+223,DNK,Private Households
+224,DNK,Others
+225,EST,Agriculture
+226,EST,Fishing
+227,EST,Mining and Quarrying
+228,EST,Food & Beverages
+229,EST,Textiles and Wearing Apparel
+230,EST,Wood and Paper
+231,EST,"Petroleum, Chemical and Non-Metallic Mineral Products"
+232,EST,Metal Products
+233,EST,Electrical and Machinery
+234,EST,Transport Equipment
+235,EST,Other Manufacturing
+236,EST,Recycling
+237,EST,"Electricity, Gas and Water"
+238,EST,Construction
+239,EST,Maintenance and Repair
+240,EST,Wholesale Trade
+241,EST,Retail Trade
+242,EST,Hotels and Restraurants
+243,EST,Transport
+244,EST,Post and Telecommunications
+245,EST,Finacial Intermediation and Business Activities
+246,EST,Public Administration
+247,EST,"Education, Health and Other Services"
+248,EST,Private Households
+249,EST,Others
+250,FIN,Agriculture
+251,FIN,Fishing
+252,FIN,Mining and Quarrying
+253,FIN,Food & Beverages
+254,FIN,Textiles and Wearing Apparel
+255,FIN,Wood and Paper
+256,FIN,"Petroleum, Chemical and Non-Metallic Mineral Products"
+257,FIN,Metal Products
+258,FIN,Electrical and Machinery
+259,FIN,Transport Equipment
+260,FIN,Other Manufacturing
+261,FIN,Recycling
+262,FIN,"Electricity, Gas and Water"
+263,FIN,Construction
+264,FIN,Maintenance and Repair
+265,FIN,Wholesale Trade
+266,FIN,Retail Trade
+267,FIN,Hotels and Restraurants
+268,FIN,Transport
+269,FIN,Post and Telecommunications
+270,FIN,Finacial Intermediation and Business Activities
+271,FIN,Public Administration
+272,FIN,"Education, Health and Other Services"
+273,FIN,Private Households
+274,FIN,Others
+275,FRA,Agriculture
+276,FRA,Fishing
+277,FRA,Mining and Quarrying
+278,FRA,Food & Beverages
+279,FRA,Textiles and Wearing Apparel
+280,FRA,Wood and Paper
+281,FRA,"Petroleum, Chemical and Non-Metallic Mineral Products"
+282,FRA,Metal Products
+283,FRA,Electrical and Machinery
+284,FRA,Transport Equipment
+285,FRA,Other Manufacturing
+286,FRA,Recycling
+287,FRA,"Electricity, Gas and Water"
+288,FRA,Construction
+289,FRA,Maintenance and Repair
+290,FRA,Wholesale Trade
+291,FRA,Retail Trade
+292,FRA,Hotels and Restraurants
+293,FRA,Transport
+294,FRA,Post and Telecommunications
+295,FRA,Finacial Intermediation and Business Activities
+296,FRA,Public Administration
+297,FRA,"Education, Health and Other Services"
+298,FRA,Private Households
+299,FRA,Others
+300,DEU,Agriculture
+301,DEU,Fishing
+302,DEU,Mining and Quarrying
+303,DEU,Food & Beverages
+304,DEU,Textiles and Wearing Apparel
+305,DEU,Wood and Paper
+306,DEU,"Petroleum, Chemical and Non-Metallic Mineral Products"
+307,DEU,Metal Products
+308,DEU,Electrical and Machinery
+309,DEU,Transport Equipment
+310,DEU,Other Manufacturing
+311,DEU,Recycling
+312,DEU,"Electricity, Gas and Water"
+313,DEU,Construction
+314,DEU,Maintenance and Repair
+315,DEU,Wholesale Trade
+316,DEU,Retail Trade
+317,DEU,Hotels and Restraurants
+318,DEU,Transport
+319,DEU,Post and Telecommunications
+320,DEU,Finacial Intermediation and Business Activities
+321,DEU,Public Administration
+322,DEU,"Education, Health and Other Services"
+323,DEU,Private Households
+324,DEU,Others
+325,GRC,Agriculture
+326,GRC,Fishing
+327,GRC,Mining and Quarrying
+328,GRC,Food & Beverages
+329,GRC,Textiles and Wearing Apparel
+330,GRC,Wood and Paper
+331,GRC,"Petroleum, Chemical and Non-Metallic Mineral Products"
+332,GRC,Metal Products
+333,GRC,Electrical and Machinery
+334,GRC,Transport Equipment
+335,GRC,Other Manufacturing
+336,GRC,Recycling
+337,GRC,"Electricity, Gas and Water"
+338,GRC,Construction
+339,GRC,Maintenance and Repair
+340,GRC,Wholesale Trade
+341,GRC,Retail Trade
+342,GRC,Hotels and Restraurants
+343,GRC,Transport
+344,GRC,Post and Telecommunications
+345,GRC,Finacial Intermediation and Business Activities
+346,GRC,Public Administration
+347,GRC,"Education, Health and Other Services"
+348,GRC,Private Households
+349,GRC,Others
+350,HUN,Agriculture
+351,HUN,Fishing
+352,HUN,Mining and Quarrying
+353,HUN,Food & Beverages
+354,HUN,Textiles and Wearing Apparel
+355,HUN,Wood and Paper
+356,HUN,"Petroleum, Chemical and Non-Metallic Mineral Products"
+357,HUN,Metal Products
+358,HUN,Electrical and Machinery
+359,HUN,Transport Equipment
+360,HUN,Other Manufacturing
+361,HUN,Recycling
+362,HUN,"Electricity, Gas and Water"
+363,HUN,Construction
+364,HUN,Maintenance and Repair
+365,HUN,Wholesale Trade
+366,HUN,Retail Trade
+367,HUN,Hotels and Restraurants
+368,HUN,Transport
+369,HUN,Post and Telecommunications
+370,HUN,Finacial Intermediation and Business Activities
+371,HUN,Public Administration
+372,HUN,"Education, Health and Other Services"
+373,HUN,Private Households
+374,HUN,Others
+375,IND,Agriculture
+376,IND,Fishing
+377,IND,Mining and Quarrying
+378,IND,Food & Beverages
+379,IND,Textiles and Wearing Apparel
+380,IND,Wood and Paper
+381,IND,"Petroleum, Chemical and Non-Metallic Mineral Products"
+382,IND,Metal Products
+383,IND,Electrical and Machinery
+384,IND,Transport Equipment
+385,IND,Other Manufacturing
+386,IND,Recycling
+387,IND,"Electricity, Gas and Water"
+388,IND,Construction
+389,IND,Maintenance and Repair
+390,IND,Wholesale Trade
+391,IND,Retail Trade
+392,IND,Hotels and Restraurants
+393,IND,Transport
+394,IND,Post and Telecommunications
+395,IND,Finacial Intermediation and Business Activities
+396,IND,Public Administration
+397,IND,"Education, Health and Other Services"
+398,IND,Private Households
+399,IND,Others
+400,IRL,Agriculture
+401,IRL,Fishing
+402,IRL,Mining and Quarrying
+403,IRL,Food & Beverages
+404,IRL,Textiles and Wearing Apparel
+405,IRL,Wood and Paper
+406,IRL,"Petroleum, Chemical and Non-Metallic Mineral Products"
+407,IRL,Metal Products
+408,IRL,Electrical and Machinery
+409,IRL,Transport Equipment
+410,IRL,Other Manufacturing
+411,IRL,Recycling
+412,IRL,"Electricity, Gas and Water"
+413,IRL,Construction
+414,IRL,Maintenance and Repair
+415,IRL,Wholesale Trade
+416,IRL,Retail Trade
+417,IRL,Hotels and Restraurants
+418,IRL,Transport
+419,IRL,Post and Telecommunications
+420,IRL,Finacial Intermediation and Business Activities
+421,IRL,Public Administration
+422,IRL,"Education, Health and Other Services"
+423,IRL,Private Households
+424,IRL,Others
+425,ITA,Agriculture
+426,ITA,Fishing
+427,ITA,Mining and Quarrying
+428,ITA,Food & Beverages
+429,ITA,Textiles and Wearing Apparel
+430,ITA,Wood and Paper
+431,ITA,"Petroleum, Chemical and Non-Metallic Mineral Products"
+432,ITA,Metal Products
+433,ITA,Electrical and Machinery
+434,ITA,Transport Equipment
+435,ITA,Other Manufacturing
+436,ITA,Recycling
+437,ITA,"Electricity, Gas and Water"
+438,ITA,Construction
+439,ITA,Maintenance and Repair
+440,ITA,Wholesale Trade
+441,ITA,Retail Trade
+442,ITA,Hotels and Restraurants
+443,ITA,Transport
+444,ITA,Post and Telecommunications
+445,ITA,Finacial Intermediation and Business Activities
+446,ITA,Public Administration
+447,ITA,"Education, Health and Other Services"
+448,ITA,Private Households
+449,ITA,Others
+450,JPN,Agriculture
+451,JPN,Fishing
+452,JPN,Mining and Quarrying
+453,JPN,Food & Beverages
+454,JPN,Textiles and Wearing Apparel
+455,JPN,Wood and Paper
+456,JPN,"Petroleum, Chemical and Non-Metallic Mineral Products"
+457,JPN,Metal Products
+458,JPN,Electrical and Machinery
+459,JPN,Transport Equipment
+460,JPN,Other Manufacturing
+461,JPN,Recycling
+462,JPN,"Electricity, Gas and Water"
+463,JPN,Construction
+464,JPN,Maintenance and Repair
+465,JPN,Wholesale Trade
+466,JPN,Retail Trade
+467,JPN,Hotels and Restraurants
+468,JPN,Transport
+469,JPN,Post and Telecommunications
+470,JPN,Finacial Intermediation and Business Activities
+471,JPN,Public Administration
+472,JPN,"Education, Health and Other Services"
+473,JPN,Private Households
+474,JPN,Others
+475,LTU,Agriculture
+476,LTU,Fishing
+477,LTU,Mining and Quarrying
+478,LTU,Food & Beverages
+479,LTU,Textiles and Wearing Apparel
+480,LTU,Wood and Paper
+481,LTU,"Petroleum, Chemical and Non-Metallic Mineral Products"
+482,LTU,Metal Products
+483,LTU,Electrical and Machinery
+484,LTU,Transport Equipment
+485,LTU,Other Manufacturing
+486,LTU,Recycling
+487,LTU,"Electricity, Gas and Water"
+488,LTU,Construction
+489,LTU,Maintenance and Repair
+490,LTU,Wholesale Trade
+491,LTU,Retail Trade
+492,LTU,Hotels and Restraurants
+493,LTU,Transport
+494,LTU,Post and Telecommunications
+495,LTU,Finacial Intermediation and Business Activities
+496,LTU,Public Administration
+497,LTU,"Education, Health and Other Services"
+498,LTU,Private Households
+499,LTU,Others
+500,MEX,Agriculture
+501,MEX,Fishing
+502,MEX,Mining and Quarrying
+503,MEX,Food & Beverages
+504,MEX,Textiles and Wearing Apparel
+505,MEX,Wood and Paper
+506,MEX,"Petroleum, Chemical and Non-Metallic Mineral Products"
+507,MEX,Metal Products
+508,MEX,Electrical and Machinery
+509,MEX,Transport Equipment
+510,MEX,Other Manufacturing
+511,MEX,Recycling
+512,MEX,"Electricity, Gas and Water"
+513,MEX,Construction
+514,MEX,Maintenance and Repair
+515,MEX,Wholesale Trade
+516,MEX,Retail Trade
+517,MEX,Hotels and Restraurants
+518,MEX,Transport
+519,MEX,Post and Telecommunications
+520,MEX,Finacial Intermediation and Business Activities
+521,MEX,Public Administration
+522,MEX,"Education, Health and Other Services"
+523,MEX,Private Households
+524,MEX,Others
+525,NLD,Agriculture
+526,NLD,Fishing
+527,NLD,Mining and Quarrying
+528,NLD,Food & Beverages
+529,NLD,Textiles and Wearing Apparel
+530,NLD,Wood and Paper
+531,NLD,"Petroleum, Chemical and Non-Metallic Mineral Products"
+532,NLD,Metal Products
+533,NLD,Electrical and Machinery
+534,NLD,Transport Equipment
+535,NLD,Other Manufacturing
+536,NLD,Recycling
+537,NLD,"Electricity, Gas and Water"
+538,NLD,Construction
+539,NLD,Maintenance and Repair
+540,NLD,Wholesale Trade
+541,NLD,Retail Trade
+542,NLD,Hotels and Restraurants
+543,NLD,Transport
+544,NLD,Post and Telecommunications
+545,NLD,Finacial Intermediation and Business Activities
+546,NLD,Public Administration
+547,NLD,"Education, Health and Other Services"
+548,NLD,Private Households
+549,NLD,Others
+550,POL,Agriculture
+551,POL,Fishing
+552,POL,Mining and Quarrying
+553,POL,Food & Beverages
+554,POL,Textiles and Wearing Apparel
+555,POL,Wood and Paper
+556,POL,"Petroleum, Chemical and Non-Metallic Mineral Products"
+557,POL,Metal Products
+558,POL,Electrical and Machinery
+559,POL,Transport Equipment
+560,POL,Other Manufacturing
+561,POL,Recycling
+562,POL,"Electricity, Gas and Water"
+563,POL,Construction
+564,POL,Maintenance and Repair
+565,POL,Wholesale Trade
+566,POL,Retail Trade
+567,POL,Hotels and Restraurants
+568,POL,Transport
+569,POL,Post and Telecommunications
+570,POL,Finacial Intermediation and Business Activities
+571,POL,Public Administration
+572,POL,"Education, Health and Other Services"
+573,POL,Private Households
+574,POL,Others
+575,PRT,Agriculture
+576,PRT,Fishing
+577,PRT,Mining and Quarrying
+578,PRT,Food & Beverages
+579,PRT,Textiles and Wearing Apparel
+580,PRT,Wood and Paper
+581,PRT,"Petroleum, Chemical and Non-Metallic Mineral Products"
+582,PRT,Metal Products
+583,PRT,Electrical and Machinery
+584,PRT,Transport Equipment
+585,PRT,Other Manufacturing
+586,PRT,Recycling
+587,PRT,"Electricity, Gas and Water"
+588,PRT,Construction
+589,PRT,Maintenance and Repair
+590,PRT,Wholesale Trade
+591,PRT,Retail Trade
+592,PRT,Hotels and Restraurants
+593,PRT,Transport
+594,PRT,Post and Telecommunications
+595,PRT,Finacial Intermediation and Business Activities
+596,PRT,Public Administration
+597,PRT,"Education, Health and Other Services"
+598,PRT,Private Households
+599,PRT,Others
+600,KOR,Agriculture
+601,KOR,Fishing
+602,KOR,Mining and Quarrying
+603,KOR,Food & Beverages
+604,KOR,Textiles and Wearing Apparel
+605,KOR,Wood and Paper
+606,KOR,"Petroleum, Chemical and Non-Metallic Mineral Products"
+607,KOR,Metal Products
+608,KOR,Electrical and Machinery
+609,KOR,Transport Equipment
+610,KOR,Other Manufacturing
+611,KOR,Recycling
+612,KOR,"Electricity, Gas and Water"
+613,KOR,Construction
+614,KOR,Maintenance and Repair
+615,KOR,Wholesale Trade
+616,KOR,Retail Trade
+617,KOR,Hotels and Restraurants
+618,KOR,Transport
+619,KOR,Post and Telecommunications
+620,KOR,Finacial Intermediation and Business Activities
+621,KOR,Public Administration
+622,KOR,"Education, Health and Other Services"
+623,KOR,Private Households
+624,KOR,Others
+625,ROU,Agriculture
+626,ROU,Fishing
+627,ROU,Mining and Quarrying
+628,ROU,Food & Beverages
+629,ROU,Textiles and Wearing Apparel
+630,ROU,Wood and Paper
+631,ROU,"Petroleum, Chemical and Non-Metallic Mineral Products"
+632,ROU,Metal Products
+633,ROU,Electrical and Machinery
+634,ROU,Transport Equipment
+635,ROU,Other Manufacturing
+636,ROU,Recycling
+637,ROU,"Electricity, Gas and Water"
+638,ROU,Construction
+639,ROU,Maintenance and Repair
+640,ROU,Wholesale Trade
+641,ROU,Retail Trade
+642,ROU,Hotels and Restraurants
+643,ROU,Transport
+644,ROU,Post and Telecommunications
+645,ROU,Finacial Intermediation and Business Activities
+646,ROU,Public Administration
+647,ROU,"Education, Health and Other Services"
+648,ROU,Private Households
+649,ROU,Others
+650,RUS,Agriculture
+651,RUS,Fishing
+652,RUS,Mining and Quarrying
+653,RUS,Food & Beverages
+654,RUS,Textiles and Wearing Apparel
+655,RUS,Wood and Paper
+656,RUS,"Petroleum, Chemical and Non-Metallic Mineral Products"
+657,RUS,Metal Products
+658,RUS,Electrical and Machinery
+659,RUS,Transport Equipment
+660,RUS,Other Manufacturing
+661,RUS,Recycling
+662,RUS,"Electricity, Gas and Water"
+663,RUS,Construction
+664,RUS,Maintenance and Repair
+665,RUS,Wholesale Trade
+666,RUS,Retail Trade
+667,RUS,Hotels and Restraurants
+668,RUS,Transport
+669,RUS,Post and Telecommunications
+670,RUS,Finacial Intermediation and Business Activities
+671,RUS,Public Administration
+672,RUS,"Education, Health and Other Services"
+673,RUS,Private Households
+674,RUS,Others
+675,SVK,Agriculture
+676,SVK,Fishing
+677,SVK,Mining and Quarrying
+678,SVK,Food & Beverages
+679,SVK,Textiles and Wearing Apparel
+680,SVK,Wood and Paper
+681,SVK,"Petroleum, Chemical and Non-Metallic Mineral Products"
+682,SVK,Metal Products
+683,SVK,Electrical and Machinery
+684,SVK,Transport Equipment
+685,SVK,Other Manufacturing
+686,SVK,Recycling
+687,SVK,"Electricity, Gas and Water"
+688,SVK,Construction
+689,SVK,Maintenance and Repair
+690,SVK,Wholesale Trade
+691,SVK,Retail Trade
+692,SVK,Hotels and Restraurants
+693,SVK,Transport
+694,SVK,Post and Telecommunications
+695,SVK,Finacial Intermediation and Business Activities
+696,SVK,Public Administration
+697,SVK,"Education, Health and Other Services"
+698,SVK,Private Households
+699,SVK,Others
+700,SVN,Agriculture
+701,SVN,Fishing
+702,SVN,Mining and Quarrying
+703,SVN,Food & Beverages
+704,SVN,Textiles and Wearing Apparel
+705,SVN,Wood and Paper
+706,SVN,"Petroleum, Chemical and Non-Metallic Mineral Products"
+707,SVN,Metal Products
+708,SVN,Electrical and Machinery
+709,SVN,Transport Equipment
+710,SVN,Other Manufacturing
+711,SVN,Recycling
+712,SVN,"Electricity, Gas and Water"
+713,SVN,Construction
+714,SVN,Maintenance and Repair
+715,SVN,Wholesale Trade
+716,SVN,Retail Trade
+717,SVN,Hotels and Restraurants
+718,SVN,Transport
+719,SVN,Post and Telecommunications
+720,SVN,Finacial Intermediation and Business Activities
+721,SVN,Public Administration
+722,SVN,"Education, Health and Other Services"
+723,SVN,Private Households
+724,SVN,Others
+725,ESP,Agriculture
+726,ESP,Fishing
+727,ESP,Mining and Quarrying
+728,ESP,Food & Beverages
+729,ESP,Textiles and Wearing Apparel
+730,ESP,Wood and Paper
+731,ESP,"Petroleum, Chemical and Non-Metallic Mineral Products"
+732,ESP,Metal Products
+733,ESP,Electrical and Machinery
+734,ESP,Transport Equipment
+735,ESP,Other Manufacturing
+736,ESP,Recycling
+737,ESP,"Electricity, Gas and Water"
+738,ESP,Construction
+739,ESP,Maintenance and Repair
+740,ESP,Wholesale Trade
+741,ESP,Retail Trade
+742,ESP,Hotels and Restraurants
+743,ESP,Transport
+744,ESP,Post and Telecommunications
+745,ESP,Finacial Intermediation and Business Activities
+746,ESP,Public Administration
+747,ESP,"Education, Health and Other Services"
+748,ESP,Private Households
+749,ESP,Others
+750,SWE,Agriculture
+751,SWE,Fishing
+752,SWE,Mining and Quarrying
+753,SWE,Food & Beverages
+754,SWE,Textiles and Wearing Apparel
+755,SWE,Wood and Paper
+756,SWE,"Petroleum, Chemical and Non-Metallic Mineral Products"
+757,SWE,Metal Products
+758,SWE,Electrical and Machinery
+759,SWE,Transport Equipment
+760,SWE,Other Manufacturing
+761,SWE,Recycling
+762,SWE,"Electricity, Gas and Water"
+763,SWE,Construction
+764,SWE,Maintenance and Repair
+765,SWE,Wholesale Trade
+766,SWE,Retail Trade
+767,SWE,Hotels and Restraurants
+768,SWE,Transport
+769,SWE,Post and Telecommunications
+770,SWE,Finacial Intermediation and Business Activities
+771,SWE,Public Administration
+772,SWE,"Education, Health and Other Services"
+773,SWE,Private Households
+774,SWE,Others
+775,TWN,Agriculture
+776,TWN,Fishing
+777,TWN,Mining and Quarrying
+778,TWN,Food & Beverages
+779,TWN,Textiles and Wearing Apparel
+780,TWN,Wood and Paper
+781,TWN,"Petroleum, Chemical and Non-Metallic Mineral Products"
+782,TWN,Metal Products
+783,TWN,Electrical and Machinery
+784,TWN,Transport Equipment
+785,TWN,Other Manufacturing
+786,TWN,Recycling
+787,TWN,"Electricity, Gas and Water"
+788,TWN,Construction
+789,TWN,Maintenance and Repair
+790,TWN,Wholesale Trade
+791,TWN,Retail Trade
+792,TWN,Hotels and Restraurants
+793,TWN,Transport
+794,TWN,Post and Telecommunications
+795,TWN,Finacial Intermediation and Business Activities
+796,TWN,Public Administration
+797,TWN,"Education, Health and Other Services"
+798,TWN,Private Households
+799,TWN,Others
+800,TUR,Agriculture
+801,TUR,Fishing
+802,TUR,Mining and Quarrying
+803,TUR,Food & Beverages
+804,TUR,Textiles and Wearing Apparel
+805,TUR,Wood and Paper
+806,TUR,"Petroleum, Chemical and Non-Metallic Mineral Products"
+807,TUR,Metal Products
+808,TUR,Electrical and Machinery
+809,TUR,Transport Equipment
+810,TUR,Other Manufacturing
+811,TUR,Recycling
+812,TUR,"Electricity, Gas and Water"
+813,TUR,Construction
+814,TUR,Maintenance and Repair
+815,TUR,Wholesale Trade
+816,TUR,Retail Trade
+817,TUR,Hotels and Restraurants
+818,TUR,Transport
+819,TUR,Post and Telecommunications
+820,TUR,Finacial Intermediation and Business Activities
+821,TUR,Public Administration
+822,TUR,"Education, Health and Other Services"
+823,TUR,Private Households
+824,TUR,Others
+825,GBR,Agriculture
+826,GBR,Fishing
+827,GBR,Mining and Quarrying
+828,GBR,Food & Beverages
+829,GBR,Textiles and Wearing Apparel
+830,GBR,Wood and Paper
+831,GBR,"Petroleum, Chemical and Non-Metallic Mineral Products"
+832,GBR,Metal Products
+833,GBR,Electrical and Machinery
+834,GBR,Transport Equipment
+835,GBR,Other Manufacturing
+836,GBR,Recycling
+837,GBR,"Electricity, Gas and Water"
+838,GBR,Construction
+839,GBR,Maintenance and Repair
+840,GBR,Wholesale Trade
+841,GBR,Retail Trade
+842,GBR,Hotels and Restraurants
+843,GBR,Transport
+844,GBR,Post and Telecommunications
+845,GBR,Finacial Intermediation and Business Activities
+846,GBR,Public Administration
+847,GBR,"Education, Health and Other Services"
+848,GBR,Private Households
+849,GBR,Others
+850,USA,Agriculture
+851,USA,Fishing
+852,USA,Mining and Quarrying
+853,USA,Food & Beverages
+854,USA,Textiles and Wearing Apparel
+855,USA,Wood and Paper
+856,USA,"Petroleum, Chemical and Non-Metallic Mineral Products"
+857,USA,Metal Products
+858,USA,Electrical and Machinery
+859,USA,Transport Equipment
+860,USA,Other Manufacturing
+861,USA,Recycling
+862,USA,"Electricity, Gas and Water"
+863,USA,Construction
+864,USA,Maintenance and Repair
+865,USA,Wholesale Trade
+866,USA,Retail Trade
+867,USA,Hotels and Restraurants
+868,USA,Transport
+869,USA,Post and Telecommunications
+870,USA,Finacial Intermediation and Business Activities
+871,USA,Public Administration
+872,USA,"Education, Health and Other Services"
+873,USA,Private Households
+874,USA,Others
+875,VNM,Agriculture
+876,VNM,Fishing
+877,VNM,Mining and Quarrying
+878,VNM,Food & Beverages
+879,VNM,Textiles and Wearing Apparel
+880,VNM,Wood and Paper
+881,VNM,"Petroleum, Chemical and Non-Metallic Mineral Products"
+882,VNM,Metal Products
+883,VNM,Electrical and Machinery
+884,VNM,Transport Equipment
+885,VNM,Other Manufacturing
+886,VNM,Recycling
+887,VNM,"Electricity, Gas and Water"
+888,VNM,Construction
+889,VNM,Maintenance and Repair
+890,VNM,Wholesale Trade
+891,VNM,Retail Trade
+892,VNM,Hotels and Restraurants
+893,VNM,Transport
+894,VNM,Post and Telecommunications
+895,VNM,Finacial Intermediation and Business Activities
+896,VNM,Public Administration
+897,VNM,"Education, Health and Other Services"
+898,VNM,Private Households
+899,VNM,Others
+900,ROW,Agriculture
+901,ROW,Fishing
+902,ROW,Mining and Quarrying
+903,ROW,Food & Beverages
+904,ROW,Textiles and Wearing Apparel
+905,ROW,Wood and Paper
+906,ROW,"Petroleum, Chemical and Non-Metallic Mineral Products"
+907,ROW,Metal Products
+908,ROW,Electrical and Machinery
+909,ROW,Transport Equipment
+910,ROW,Other Manufacturing
+911,ROW,Recycling
+912,ROW,"Electricity, Gas and Water"
+913,ROW,Construction
+914,ROW,Maintenance and Repair
+915,ROW,Wholesale Trade
+916,ROW,Retail Trade
+917,ROW,Hotels and Restraurants
+918,ROW,Transport
+919,ROW,Post and Telecommunications
+920,ROW,Finacial Intermediation and Business Activities
+921,ROW,Public Administration
+922,ROW,"Education, Health and Other Services"
+923,ROW,Private Households
+924,ROW,Others
