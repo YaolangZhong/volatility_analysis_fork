@@ -176,7 +176,7 @@ class ModelShocks(NpzMixin):
     """
     lambda_hat:       np.ndarray  # shape (N, S)
     d_hat:           np.ndarray  # shape (N, N, S)
-    tilde_tau_prime:  np.ndarray  # shape (N, N, S)
+    tilde_tau_hat:  np.ndarray  # shape (N, N, S)
 
     _initialized: bool = field(init=False, default=False, repr=False)
 
@@ -196,7 +196,7 @@ class ModelShocks(NpzMixin):
         super().__setattr__(name, value)
         # only re-check core arrays after init
         if getattr(self, "_initialized", False) and name in (
-            "lambda_hat", "d_hat", "tilde_tau_prime"
+            "lambda_hat", "d_hat", "tilde_tau_hat"
         ):
             self.check_consistency(tol=1e-6, mute=CHECK_CONSISTENCY_MUTE)
 
@@ -214,7 +214,7 @@ class ModelShocks(NpzMixin):
         try:
             assert self.lambda_hat.shape == (N, S), f"lambda_hat shape {self.lambda_hat.shape} != ({N}, {S})"
             assert self.d_hat.shape == (N, N, S), f"df_hat shape {self.d_hat.shape} != ({N}, {N}, {S})"
-            assert self.tilde_tau_prime.shape == (N, N, S), f"tilde_tau_prime shape {self.tilde_tau_prime.shape} != ({N}, {N}, {S})"
+            assert self.tilde_tau_hat.shape == (N, N, S), f"tilde_tau_hat shape {self.tilde_tau_hat.shape} != ({N}, {N}, {S})"
         except AssertionError as e:
             logger.error("Dimension check failed: %s", e)
             inconsistent = True
@@ -252,24 +252,24 @@ class ModelShocks(NpzMixin):
                 logger.info("Check 3-2: ✅ Diagonal elements of d_hat are 1.")
 
 
-        # 5. Check consistency of tilde_tau_prime.
+        # 5. Check consistency of tilde_tau_hat.
         # 5-1: Every value must be >= 1.
-        if np.any(self.tilde_tau_prime < 1):
-            invalid_indices = np.where(self.tilde_tau_prime < 1)
-            logger.error("Check 5-1: ❌ Some tilde_tau_prime values are < 1 at positions %s. Values: %s", 
-                         invalid_indices, self.tilde_tau_prime[invalid_indices])
+        if np.any(self.tilde_tau_hat < 1):
+            invalid_indices = np.where(self.tilde_tau_hat < 1)
+            logger.error("Check 5-1: ❌ Some tilde_tau_hat values are < 1 at positions %s. Values: %s", 
+                         invalid_indices, self.tilde_tau_hat[invalid_indices])
             inconsistent = True
         else:
             if not mute:
-                logger.info("Check 5-1: ✅ All tilde_tau_prime values are >= 1.")
+                logger.info("Check 5-1: ✅ All tilde_tau_hat values are >= 1.")
         # 5-2: Diagonal elements must be 1.
-        diag_tau = self.tilde_tau_prime[np.arange(N), np.arange(N), :]
+        diag_tau = self.tilde_tau_hat[np.arange(N), np.arange(N), :]
         if not np.allclose(diag_tau, 1.0, atol=tol):
-            logger.error("Check 5-2: ❌ Diagonal elements of tilde_tau_prime are not equal to 1. They are: %s", diag_tau)
+            logger.error("Check 5-2: ❌ Diagonal elements of tilde_tau_hat are not equal to 1. They are: %s", diag_tau)
             inconsistent = True
         else:
             if not mute:
-                logger.info("Check 5-2: ✅ Diagonal elements of tilde_tau_prime are 1.")
+                logger.info("Check 5-2: ✅ Diagonal elements of tilde_tau_hat are 1.")
 
         if not inconsistent:
             if not mute:
@@ -286,7 +286,7 @@ class ModelShocks(NpzMixin):
         """
         Return a tuple of all init fields in their declared order.
         Example:
-            (lambda_hat, d_hat, tilde_tau_prime) = shocks.unpack()
+            (lambda_hat, d_hat, tilde_tau_hat) = shocks.unpack()
         """
         return tuple(getattr(self, f.name) for f in fields(self) if f.init)
 
@@ -347,7 +347,7 @@ class Model:
         self.shocks = ModelShocks(
             lambda_hat      = np.ones((N,S)),
             d_hat          = np.ones((N,N,S)),
-            tilde_tau_prime = np.ones((N,N,S)),
+            tilde_tau_hat = np.ones((N,N,S)),
         )
         self.is_optimized = False
 
