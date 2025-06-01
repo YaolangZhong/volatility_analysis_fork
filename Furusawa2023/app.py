@@ -1,8 +1,8 @@
 import plotly.express as px
 import streamlit as st
 import numpy as np
-from Furusawa2023.solvers import ModelSolver
-from Furusawa2023.models import ModelParams, Model, ModelSol
+from models import ModelParams, Model, ModelSol
+from solvers import ModelSolver
 
 st.set_page_config(layout="wide")
 
