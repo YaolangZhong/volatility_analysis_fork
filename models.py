@@ -353,9 +353,13 @@ class ModelSol(NpzMixin):
     pim_hat:   np.ndarray  # shape (N, N, S)
     Xf_prime:  np.ndarray  # shape (N, S)
     Xm_prime:  np.ndarray  # shape (N, S)
+    X_prime:   np.ndarray  # shape (N, S)
     p_index:   np.ndarray  # shape (N,)
     real_w:    np.ndarray  # shape (N,)
     D_prime:  np.ndarray  # shape (N,)
+    Xf_prod_prime: np.ndarray  # shape (N, S)
+    Xm_prod_prime: np.ndarray  # shape (N, S)
+    X_prod_prime: np.ndarray  # shape (N, S)
     
 
     # ------------------------------------------------------------------
@@ -405,9 +409,13 @@ class Model:
             pim_hat  = np.ones((N,N,S)),
             Xf_prime = np.ones((N,S)),
             Xm_prime = np.ones((N,S)),
+            X_prime = np.ones((N,S)),
             p_index  = np.ones(N),
             real_w   = np.ones(N),
             D_prime = np.ones(N),
+            Xf_prod_prime = np.ones((N,S)),
+            Xm_prod_prime = np.ones((N,S)),
+            X_prod_prime = np.ones((N,S)),
         )
 
     @classmethod
