@@ -6,10 +6,9 @@ from solvers import ModelSolver
 
 st.set_page_config(layout="wide")
 
-
 @st.cache_resource
 def solve_benchmark_model():
-    data_file_name = "Furusawa2023/data/data_2017(gvc_consistent).npz"
+    data_file_name = "data_2017(gvc_consistent).npz"
     params = ModelParams.load_from_npz(data_file_name)
     params.gamma = np.swapaxes(params.gamma, 1, 2)
     model = Model(params)
@@ -405,6 +404,19 @@ elif sol_to_show is not None:
     # User: pick a variable to inspect
     variable = st.selectbox("Choose an output variable", list(sol_dict.keys()))
 
+    # Show variable explanation if available
+    variable_descriptions = {
+        "X_f'": r"$X_f'$: shape $(N, S)$, indices $n, s$\\ Total expenditure by country $n$ on goods used in producing output in sector $s$, which are then used for final consumption, under model 2.",
+        "X_m'": r"$X_m'$: shape $(N, S)$, indices $n, s$\\ Total expenditure by country $n$ on goods used in producing output in sector $s$, which are then used as intermediate inputs, under model 2.",
+        "X'": r"$X'$: shape $(N, S)$, indices $n, s$\\ Total expenditure by country $n$ on goods in sector $s$ under model 2, i.e., the sum of $X_f'$ and $X_m'$.",
+        "X_f_prod'": r"$X_{f,\text{prod}}'$: shape $(N, S)$, indices $n, s$\\ Production by country $n$ of goods in sector $s$ used for final consumption, under model 2.",
+        "X_m_prod'": r"$X_{m,\text{prod}}'$: shape $(N, S)$, indices $n, s$\\ Production by country $n$ of goods in sector $s$ used as intermediate inputs, under model 2.",
+        "X_prod'": r"$X_{\text{prod}}'$: shape $(N, S)$, indices $n, s$\\ Total production by country $n$ of goods in sector $s$ under model 2, i.e., the sum of $X_{f,\text{prod}}'$ and $X_{m,\text{prod}}'$."
+        # Add more variable descriptions here as needed
+    }
+    if variable in variable_descriptions:
+        st.markdown(variable_descriptions[variable], unsafe_allow_html=True)
+
     value = sol_dict[variable]
 
     # Display variable shape for clarity
@@ -598,3 +610,4 @@ elif sol_to_show is not None:
         st.write(value)
 else:
     st.info("No model solution available to display.")
+    

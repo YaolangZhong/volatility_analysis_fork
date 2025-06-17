@@ -212,6 +212,9 @@ def calc_D_prime(
 
     return D_prime
 
+def calc_production(X, pi):
+    return np.sum(X[:, np.newaxis, :] * pi, axis=0)
+
 
 # @njit
 def generate_equilibrium(
@@ -251,4 +254,9 @@ def generate_equilibrium(
     #D_prime = calc_D_prime(pi_prime, tilde_tau_prime, X_prime)
     p_index = np.exp((alpha * np.log(Pf_hat)).sum(axis=1))  # Cobb-Douglas CPI
     real_w  = w_hat / p_index
-    return (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, Xf_prime, Xm_prime, D_prime, p_index, real_w)
+    X_prime = Xf_prime + Xm_prime
+    Xf_prod_prime = calc_production(Xf_prime, pif)
+    Xm_prod_prime = calc_production(Xm_prime, pim)
+    X_prod_prime = Xf_prod_prime + Xm_prod_prime
+
+    return (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, Xf_prime, Xm_prime, D_prime, p_index, real_w, X_prime, Xf_prod_prime, Xm_prod_prime, X_prod_prime)
