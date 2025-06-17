@@ -6,7 +6,6 @@ from solvers import ModelSolver
 
 st.set_page_config(layout="wide")
 
-
 @st.cache_resource
 def solve_benchmark_model():
     data_file_name = "data_2017(gvc_consistent).npz"
@@ -54,16 +53,14 @@ country_names_sorted = [c for c in priority_countries if c in country_names] + [
 st.title("Model Output Explorer")
 
 
-# Figure size sliders at the top (not in expander)
-st.header("Figure Size Adjustment")
-fig_width = st.slider("Figure Width", min_value=400, max_value=2000, value=1600, step=100)
-fig_height = st.slider("Figure Height", min_value=300, max_value=1000, value=700, step=50)
+
+# Remove global figure size adjustment block here
 
 from copy import deepcopy
 
-# Model selection header
 st.header("Model Selection")
-model_view = st.radio("Select model to view", ["Benchmark", "Counterfactual", "Compare Two Models"])
+# Remove model_view radio; set directly to "Compare Two Models"
+model_view = "Compare Two Models"
 
 def get_model_solution(model_type, params, which):
     if model_type == "Benchmark":
@@ -136,6 +133,11 @@ def get_model_solution(model_type, params, which):
 sol_to_show = None
 value = None
 if model_view == "Compare Two Models":
+    # Ensure selector lists are always defined
+    selected_importers = []
+    selected_exporters = []
+    selected_sectors = []
+    selected_countries = []
     model1_type = st.radio("Model 1", ["Benchmark", "Counterfactual"], horizontal=True, key="model1_type")
     model2_type = st.radio("Model 2", ["Benchmark", "Counterfactual"], horizontal=True, key="model2_type")
     sol1 = get_model_solution(model1_type, params, which=1)
@@ -150,8 +152,10 @@ if model_view == "Compare Two Models":
         variable = st.selectbox("Choose an output variable", variable_keys)
         val1 = sol1_dict[variable]
         val2 = sol2_dict[variable]
-        pct_change = 100 * (val2 - val1) / (np.abs(val1) + 1e-8)
-        value = pct_change
+        if variable.endswith("_hat"):
+            value = 100 * (val2 - val1) / (np.abs(val1) + 1e-8)
+        else:
+            value = val2
         sol_to_show = None  # triggers the correct display logic below
     else:
         value = None
@@ -206,11 +210,31 @@ else:
 if model_view == "Compare Two Models":
     # The header and selectbox have already been moved above.
     if value is not None:
-        st.write(f"Variable shape: {np.shape(value)} (showing % change from Model 1 to Model 2)")
+        # Show variable explanation if available
+        variable_descriptions = {
+            "w_hat": r"""$\hat{w}$: shape $(N,)$, index ($i$)<br>Percentage change in nominal wage in country $i$.""",
+            "c_hat": r"""$\hat{c}$: shape $(N, S)$, indices ($i$, $s$)<br>Percentage change in the unit cost of input bundles for producing output in country $i$, sector $s$.""",
+            "Pf_hat": r"""$\hat{P}_f$: shape $(N, S)$, indices ($i$, $s$)<br>Percentage change in prices of final goods in country $i$, sector $s$.""",
+            "Pm_hat": r"""$\hat{P}_m$: shape $(N, S)$, indices ($i$, $s$)<br>Percentage change in prices of intermediate goods in country $i$, sector $s$.""",
+            "pif_hat": r"""$\hat{\pi}_f$: shape $(N, N, S)$, indices ($n$, $i$, $s$)<br>Percentage change in expenditure shares by importer $n$ on goods from exporter $i$ used in producing goods in sector $s$, which are then used for final consumption.""",
+            "pim_hat": r"""$\hat{\pi}_m$: shape $(N, N, S)$, indices ($n$, $i$, $s$)<br>Percentage change in expenditure shares by importer $n$ on goods from exporter $i$ used in producing goods in sector $s$, which are then used as intermediate inputs.""",
+            "Xf_prime": r"""$X_f'$: shape $(N, S)$, indices ($n$, $s$)<br>Total expenditure by country $n$ on goods used in producing output in sector $s$, which are then used for final consumption, under model 2.""",
+            "Xm_prime": r"""$X_m'$: shape $(N, S)$, indices ($n$, $s$)<br>Total expenditure by country $n$ on goods used in producing output in sector $s$, which are then used as intermediate inputs, under model 2.""",
+            "X_prime": r"""$X'$: shape $(N, S)$, indices ($n$, $s$)<br>Total expenditure by country $n$ on goods in sector $s$ under model 2, i.e., the sum of $X_f'$ and $X_m'$.""",
+            "Xf_prod_prime": r"""$X_{f,\text{prod}}'$: shape $(N, S)$, indices ($n$, $s$)<br>Production by country $n$ of goods in sector $s$ used for final consumption, under model 2.""",
+            "Xm_prod_prime": r"""$X_{m,\text{prod}}'$: shape $(N, S)$, indices ($n$, $s$)<br>Production by country $n$ of goods in sector $s$ used as intermediate inputs, under model 2.""",
+            "X_prod_prime": r"""$X_{\text{prod}}'$: shape $(N, S)$, indices ($n$, $s$)<br>Total production by country $n$ of goods in sector $s$ under model 2, i.e., the sum of $X_{f,\text{prod}}'$ and $X_{m,\text{prod}}'$.""",
+            "p_index": r"""$p_{\text{index}}$: shape $(N,)$, index ($i$)<br>Change in the aggregate price index in country $i$.""",
+            "real_w": r"""real_w: shape $(N,)$, index ($i$)<br>Percentage change in real wage in country $i$ (i.e., nominal wage deflated by the price index).""",
+            "D_prime": r"""$D'$: shape $(N,)$, index ($i$)<br>Trade deficit or surplus in country $i$ under model 2 (the counterfactual scenario)."""
+        }
+        if variable in variable_descriptions:
+            st.markdown(variable_descriptions[variable], unsafe_allow_html=True)
+        else:
+            st.write(f"Variable shape: {np.shape(value)} (showing % change from Model 1 to Model 2)")
 
         if isinstance(value, np.ndarray) and value.ndim == 2:
-            # Shape (N, S): country-sector selection with "Select ALL" buttons and separate plots per country
-
+            # 2D: Only show country-sector selectors
             country_key = "country_multiselect"
             cols = st.columns(2)
             with cols[0]:
@@ -232,7 +256,13 @@ if model_view == "Compare Two Models":
             selected_sectors = st.multiselect("Sectors", sector_names, default=sector_names, key=sector_key)
 
             if selected_countries and selected_sectors:
+                st.markdown("### Figure Size Adjustment")
+                st.session_state["fig_width"] = st.slider("Figure Width", min_value=400, max_value=2000, value=st.session_state.get("fig_width", 1600), step=100)
+                st.session_state["fig_height"] = st.slider("Figure Height", min_value=300, max_value=1000, value=st.session_state.get("fig_height", 700), step=50)
+                fig_width = st.session_state["fig_width"]
+                fig_height = st.session_state["fig_height"]
                 selected_countries_in_model_order = [c for c in country_names if c in selected_countries]
+                y_label = f"{variable} (% Change)" if variable.endswith("_hat") else variable
                 for country in selected_countries_in_model_order:
                     c_idx = country_names.index(country)
                     bars = []
@@ -242,15 +272,16 @@ if model_view == "Compare Two Models":
                         val = value[c_idx, s_idx]
                         bars.append(val)
                         labels.append(sector)
+                    unique_key = f"{country}_2d"
                     fig = px.bar(
                         x=labels,
                         y=bars,
-                        labels={'x': "Sector", 'y': f"{variable} (% Change)"},
+                        labels={'x': "Sector", 'y': y_label},
                         title=f"{country}: Selected Sectors",
                         height=fig_height,
                         width=fig_width
                     )
-                    fig.update_traces(hovertemplate=f'Sector: %{{x}}<br>{variable} (% Change): %{{y:.2f}}')
+                    fig.update_traces(hovertemplate=f'Sector: %{{x}}<br>{y_label}: %{{y:.2f}}')
                     fig.update_layout(
                         xaxis_tickangle=-45,
                         xaxis_title_font=dict(size=20, color='black'),
@@ -261,8 +292,7 @@ if model_view == "Compare Two Models":
                 st.info("No countries or sectors selected.")
 
         elif isinstance(value, np.ndarray) and value.ndim == 3:
-            # Shape (N, N, S): importer-exporter-sector with "Select ALL" buttons for each
-
+            # 3D: Only show importer/exporter/sector selectors
             importer_key = "importer_multiselect"
             cols = st.columns(2)
             with cols[0]:
@@ -294,8 +324,14 @@ if model_view == "Compare Two Models":
             selected_sectors = st.multiselect("Sectors", sector_names, default=sector_names, key=sector_3d_key)
 
             if selected_importers and selected_exporters and selected_sectors:
+                st.markdown("### Figure Size Adjustment")
+                st.session_state["fig_width"] = st.slider("Figure Width", min_value=400, max_value=2000, value=st.session_state.get("fig_width", 1600), step=100)
+                st.session_state["fig_height"] = st.slider("Figure Height", min_value=300, max_value=1000, value=st.session_state.get("fig_height", 700), step=50)
+                fig_width = st.session_state["fig_width"]
+                fig_height = st.session_state["fig_height"]
                 selected_importers_in_model_order = [c for c in country_names if c in selected_importers]
                 selected_exporters_in_model_order = [c for c in country_names if c in selected_exporters]
+                y_label = f"{variable} (% Change)" if variable.endswith("_hat") else variable
                 for importer in selected_importers_in_model_order:
                     for exporter in selected_exporters_in_model_order:
                         i_idx = country_names.index(importer)
@@ -306,15 +342,16 @@ if model_view == "Compare Two Models":
                             s_idx = sector_names.index(sector)
                             bars.append(value[i_idx, e_idx, s_idx])
                             labels.append(sector)
+                        unique_key = f"{importer}_{exporter}_3d"
                         fig = px.bar(
                             x=labels,
                             y=bars,
-                            labels={'x': "Sector", 'y': f"{variable} (% Change)"},
+                            labels={'x': "Sector", 'y': y_label},
                             title=f"{importer} (Importer) — {exporter} (Exporter): Selected Sectors",
                             height=fig_height,
                             width=fig_width
                         )
-                        fig.update_traces(hovertemplate=f'Sector: %{{x}}<br>{variable} (% Change): %{{y:.2f}}')
+                        fig.update_traces(hovertemplate=f'Sector: %{{x}}<br>{y_label}: %{{y:.2f}}')
                         fig.update_layout(
                             xaxis_tickangle=-45,
                             xaxis_title_font=dict(size=20, color='black'),
@@ -367,16 +404,25 @@ if model_view == "Compare Two Models":
                     bars.append(value[idx])
                     labels.append(name)
 
+            # Insert Figure Size Adjustment just before if bars:
+            st.markdown("### Figure Size Adjustment")
+            st.session_state["fig_width"] = st.slider("Figure Width", min_value=400, max_value=2000, value=st.session_state.get("fig_width", 1600), step=100)
+            st.session_state["fig_height"] = st.slider("Figure Height", min_value=300, max_value=1000, value=st.session_state.get("fig_height", 700), step=50)
+            fig_width = st.session_state["fig_width"]
+            fig_height = st.session_state["fig_height"]
+
             if bars:
+                unique_key = f"1d_{label}_{'_'.join(labels)}"
+                y_label = f"{variable} (% Change)" if variable.endswith("_hat") else variable
                 fig = px.bar(
                     x=labels,
                     y=bars,
-                    labels={'x': label, 'y': f"{variable} (% Change)"},
+                    labels={'x': label, 'y': y_label},
                     title="Selected Values",
                     height=fig_height,
                     width=fig_width
                 )
-                fig.update_traces(hovertemplate=f'{label}: %{{x}}<br>{variable} (% Change): %{{y:.2f}}')
+                fig.update_traces(hovertemplate=f'{label}: %{{x}}<br>{y_label}: %{{y:.2f}}')
                 fig.update_layout(
                     xaxis_tickangle=-45,
                     xaxis_title_font=dict(size=20, color='black'),
@@ -405,14 +451,38 @@ elif sol_to_show is not None:
     # User: pick a variable to inspect
     variable = st.selectbox("Choose an output variable", list(sol_dict.keys()))
 
+    # Show variable explanation if available
+    variable_descriptions = {
+        "w_hat": r"""$\hat{w}$: shape $(N,)$, index ($i$)<br>Percentage change in nominal wage in country $i$.""",
+        "c_hat": r"""$\hat{c}$: shape $(N, S)$, indices ($i$, $s$)<br>Percentage change in the unit cost of input bundles for producing output in country $i$, sector $s$.""",
+        "Pf_hat": r"""$\hat{P}_f$: shape $(N, S)$, indices ($i$, $s$)<br>Percentage change in prices of final goods in country $i$, sector $s$.""",
+        "Pm_hat": r"""$\hat{P}_m$: shape $(N, S)$, indices ($i$, $s$)<br>Percentage change in prices of intermediate goods in country $i$, sector $s$.""",
+        "pif_hat": r"""$\hat{\pi}_f$: shape $(N, N, S)$, indices ($n$, $i$, $s$)<br>Percentage change in expenditure shares by importer $n$ on goods from exporter $i$ used in producing goods in sector $s$, which are then used for final consumption.""",
+        "pim_hat": r"""$\hat{\pi}_m$: shape $(N, N, S)$, indices ($n$, $i$, $s$)<br>Percentage change in expenditure shares by importer $n$ on goods from exporter $i$ used in producing goods in sector $s$, which are then used as intermediate inputs.""",
+        "Xf_prime": r"""$X_f'$: shape $(N, S)$, indices ($n$, $s$)<br>Total expenditure by country $n$ on goods used in producing output in sector $s$, which are then used for final consumption, under model 2.""",
+        "Xm_prime": r"""$X_m'$: shape $(N, S)$, indices ($n$, $s$)<br>Total expenditure by country $n$ on goods used in producing output in sector $s$, which are then used as intermediate inputs, under model 2.""",
+        "X_prime": r"""$X'$: shape $(N, S)$, indices ($n$, $s$)<br>Total expenditure by country $n$ on goods in sector $s$ under model 2, i.e., the sum of $X_f'$ and $X_m'$.""",
+        "Xf_prod_prime": r"""$X_{f,\text{prod}}'$: shape $(N, S)$, indices ($n$, $s$)<br>Production by country $n$ of goods in sector $s$ used for final consumption, under model 2.""",
+        "Xm_prod_prime": r"""$X_{m,\text{prod}}'$: shape $(N, S)$, indices ($n$, $s$)<br>Production by country $n$ of goods in sector $s$ used as intermediate inputs, under model 2.""",
+        "X_prod_prime": r"""$X_{\text{prod}}'$: shape $(N, S)$, indices ($n$, $s$)<br>Total production by country $n$ of goods in sector $s$ under model 2, i.e., the sum of $X_{f,\text{prod}}'$ and $X_{m,\text{prod}}'$.""",
+        "p_index": r"""$p_{\text{index}}$: shape $(N,)$, index ($i$)<br>Change in the aggregate price index in country $i$.""",
+        "real_w": r"""real_w: shape $(N,)$, index ($i$)<br>Percentage change in real wage in country $i$ (i.e., nominal wage deflated by the price index).""",
+        "D_prime": r"""$D'$: shape $(N,)$, index ($i$)<br>Trade deficit or surplus in country $i$ under model 2 (the counterfactual scenario)."""
+    }
+    if variable in variable_descriptions:
+        st.markdown(variable_descriptions[variable], unsafe_allow_html=True)
+
     value = sol_dict[variable]
 
     # Display variable shape for clarity
     st.write(f"Variable shape: {np.shape(value)}")
 
-    if isinstance(value, np.ndarray) and value.ndim == 2:
-        # Shape (N, S): country-sector selection with "Select ALL" buttons and separate plots per country
 
+
+    # Only show selectors if value is array and for the relevant cases
+    # Move selectors inside the correct ndim blocks, and show only the relevant selectors
+    if isinstance(value, np.ndarray) and value.ndim == 2:
+        # 2D: Only country-sector selectors
         country_key = "country_multiselect"
         cols = st.columns(2)
         with cols[0]:
@@ -434,7 +504,13 @@ elif sol_to_show is not None:
         selected_sectors = st.multiselect("Sectors", sector_names, default=sector_names, key=sector_key)
 
         if selected_countries and selected_sectors:
+            st.markdown("### Figure Size Adjustment")
+            st.session_state["fig_width"] = st.slider("Figure Width", min_value=400, max_value=2000, value=st.session_state.get("fig_width", 1600), step=100)
+            st.session_state["fig_height"] = st.slider("Figure Height", min_value=300, max_value=1000, value=st.session_state.get("fig_height", 700), step=50)
+            fig_width = st.session_state["fig_width"]
+            fig_height = st.session_state["fig_height"]
             selected_countries_in_model_order = [c for c in country_names if c in selected_countries]
+            y_label = f"{variable} (% Change)" if variable.endswith("_hat") else variable
             for country in selected_countries_in_model_order:
                 c_idx = country_names.index(country)
                 bars = []
@@ -447,12 +523,12 @@ elif sol_to_show is not None:
                 fig = px.bar(
                     x=labels,
                     y=bars,
-                    labels={'x': "Sector", 'y': variable},
+                    labels={'x': "Sector", 'y': y_label},
                     title=f"{country}: Selected Sectors",
                     height=fig_height,
                     width=fig_width
                 )
-                fig.update_traces(hovertemplate=f'Sector: %{{x}}<br>{variable}: %{{y:.2f}}')
+                fig.update_traces(hovertemplate=f'Sector: %{{x}}<br>{y_label}: %{{y:.2f}}')
                 fig.update_layout(
                     xaxis_tickangle=-45,
                     xaxis_title_font=dict(size=20, color='black'),
@@ -463,8 +539,7 @@ elif sol_to_show is not None:
             st.info("No countries or sectors selected.")
 
     elif isinstance(value, np.ndarray) and value.ndim == 3:
-        # Shape (N, N, S): importer-exporter-sector with "Select ALL" buttons for each
-
+        # 3D: Only importer/exporter/sector selectors
         importer_key = "importer_multiselect"
         cols = st.columns(2)
         with cols[0]:
@@ -496,8 +571,14 @@ elif sol_to_show is not None:
         selected_sectors = st.multiselect("Sectors", sector_names, default=sector_names, key=sector_3d_key)
 
         if selected_importers and selected_exporters and selected_sectors:
+            st.markdown("### Figure Size Adjustment")
+            st.session_state["fig_width"] = st.slider("Figure Width", min_value=400, max_value=2000, value=st.session_state.get("fig_width", 1600), step=100)
+            st.session_state["fig_height"] = st.slider("Figure Height", min_value=300, max_value=1000, value=st.session_state.get("fig_height", 700), step=50)
+            fig_width = st.session_state["fig_width"]
+            fig_height = st.session_state["fig_height"]
             selected_importers_in_model_order = [c for c in country_names if c in selected_importers]
             selected_exporters_in_model_order = [c for c in country_names if c in selected_exporters]
+            y_label = f"{variable} (% Change)" if variable.endswith("_hat") else variable
             for importer in selected_importers_in_model_order:
                 for exporter in selected_exporters_in_model_order:
                     i_idx = country_names.index(importer)
@@ -511,12 +592,12 @@ elif sol_to_show is not None:
                     fig = px.bar(
                         x=labels,
                         y=bars,
-                        labels={'x': "Sector", 'y': variable},
+                        labels={'x': "Sector", 'y': y_label},
                         title=f"{importer} (Importer) — {exporter} (Exporter): Selected Sectors",
                         height=fig_height,
                         width=fig_width
                     )
-                    fig.update_traces(hovertemplate=f'Sector: %{{x}}<br>{variable}: %{{y:.2f}}')
+                    fig.update_traces(hovertemplate=f'Sector: %{{x}}<br>{y_label}: %{{y:.2f}}')
                     fig.update_layout(
                         xaxis_tickangle=-45,
                         xaxis_title_font=dict(size=20, color='black'),
@@ -569,16 +650,24 @@ elif sol_to_show is not None:
                 bars.append(value[idx])
                 labels.append(name)
 
+        # Insert Figure Size Adjustment just before if bars:
+        st.markdown("### Figure Size Adjustment")
+        st.session_state["fig_width"] = st.slider("Figure Width", min_value=400, max_value=2000, value=st.session_state.get("fig_width", 1600), step=100)
+        st.session_state["fig_height"] = st.slider("Figure Height", min_value=300, max_value=1000, value=st.session_state.get("fig_height", 700), step=50)
+        fig_width = st.session_state["fig_width"]
+        fig_height = st.session_state["fig_height"]
+
         if bars:
+            y_label = f"{variable} (% Change)" if variable.endswith("_hat") else variable
             fig = px.bar(
                 x=labels,
                 y=bars,
-                labels={'x': label, 'y': variable},
+                labels={'x': label, 'y': y_label},
                 title="Selected Values",
                 height=fig_height,
                 width=fig_width
             )
-            fig.update_traces(hovertemplate=f'{label}: %{{x}}<br>{variable}: %{{y:.2f}}')
+            fig.update_traces(hovertemplate=f'{label}: %{{x}}<br>{y_label}: %{{y:.2f}}')
             fig.update_layout(
                 xaxis_tickangle=-45,
                 xaxis_title_font=dict(size=20, color='black'),
@@ -598,3 +687,4 @@ elif sol_to_show is not None:
         st.write(value)
 else:
     st.info("No model solution available to display.")
+    
