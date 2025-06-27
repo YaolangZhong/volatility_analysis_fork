@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple 3D Trade Network</title>
+    <script src="https://unpkg.com/3d-force-graph"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="3d-graph"></div>
+        
+        <div class="info-panel">
+            <h3>🌐 3D Trade Network</h3>
+            <p><strong>Controls:</strong></p>
+            <p>• Drag to rotate</p>
+            <p>• Scroll to zoom</p>
+            <p>• Click nodes for info</p>
+            <p><strong>Node sizes</strong> represent total expenditure</p>
+            <p><strong>Colors</strong> indicate continents</p>
+        </div>
+        
+        <div class="stats">
+            <h4>📊 Statistics</h4>
+            <p>Countries: <span id="countryCount">0</span></p>
+            <p>Total Expenditure: <span id="totalExpenditure">$0</span></p>
+            <p>Selected: <span id="selectedNode">None</span></p>
+        </div>
+    </div>
+
+    <script>
+        // Sample data for 37 countries
+        const countryData = [
+            { id: "USA", name: "United States", expenditure: 2.1e10, continent: "North America" },
+            { id: "CHN", name: "China", expenditure: 1.8e10, continent: "Asia" },
+            { id: "JPN", name: "Japan", expenditure: 1.2e10, continent: "Asia" },
+            { id: "DEU", name: "Germany", expenditure: 9.5e9, continent: "Europe" },
+            { id: "GBR", name: "United Kingdom", expenditure: 7.8e9, continent: "Europe" },
+            { id: "FRA", name: "France", expenditure: 6.9e9, continent: "Europe" },
+            { id: "ITA", name: "Italy", expenditure: 5.8e9, continent: "Europe" },
+            { id: "CAN", name: "Canada", expenditure: 4.2e9, continent: "North America" },
+            { id: "KOR", name: "South Korea", expenditure: 3.8e9, continent: "Asia" },
+            { id: "IND", name: "India", expenditure: 3.5e9, continent: "Asia" },
+            { id: "ESP", name: "Spain", expenditure: 3.2e9, continent: "Europe" },
+            { id: "NLD", name: "Netherlands", expenditure: 2.9e9, continent: "Europe" },
+            { id: "BEL", name: "Belgium", expenditure: 2.6e9, continent: "Europe" },
+            { id: "SWE", name: "Sweden", expenditure: 2.3e9, continent: "Europe" },
+            { id: "RUS", name: "Russia", expenditure: 2.1e9, continent: "Europe" },
+            { id: "BRA", name: "Brazil", expenditure: 1.9e9, continent: "South America" },
+            { id: "MEX", name: "Mexico", expenditure: 1.7e9, continent: "North America" },
+            { id: "AUS", name: "Australia", expenditure: 1.5e9, continent: "Oceania" },
+            { id: "CHE", name: "Switzerland", expenditure: 1.4e9, continent: "Europe" },
+            { id: "TUR", name: "Turkey", expenditure: 1.3e9, continent: "Europe" },
+            { id: "POL", name: "Poland", expenditure: 1.2e9, continent: "Europe" },
+            { id: "AUT", name: "Austria", expenditure: 1.1e9, continent: "Europe" },
+            { id: "NOR", name: "Norway", expenditure: 1.0e9, continent: "Europe" },
+            { id: "DNK", name: "Denmark", expenditure: 9.5e8, continent: "Europe" },
+            { id: "FIN", name: "Finland", expenditure: 8.8e8, continent: "Europe" },
+            { id: "IRL", name: "Ireland", expenditure: 8.2e8, continent: "Europe" },
+            { id: "CZE", name: "Czech Republic", expenditure: 7.6e8, continent: "Europe" },
+            { id: "PRT", name: "Portugal", expenditure: 7.1e8, continent: "Europe" },
+            { id: "HUN", name: "Hungary", expenditure: 6.5e8, continent: "Europe" },
+            { id: "GRC", name: "Greece", expenditure: 6.0e8, continent: "Europe" },
+            { id: "SVK", name: "Slovakia", expenditure: 5.5e8, continent: "Europe" },
+            { id: "LUX", name: "Luxembourg", expenditure: 5.1e8, continent: "Europe" },
+            { id: "SVN", name: "Slovenia", expenditure: 4.7e8, continent: "Europe" },
+            { id: "EST", name: "Estonia", expenditure: 4.3e8, continent: "Europe" },
+            { id: "LVA", name: "Latvia", expenditure: 3.9e8, continent: "Europe" },
+            { id: "LTU", name: "Lithuania", expenditure: 3.6e8, continent: "Europe" },
+            { id: "CYP", name: "Cyprus", expenditure: 3.3e8, continent: "Europe" },
+            { id: "MLT", name: "Malta", expenditure: 3.0e8, continent: "Europe" }
+        ];
+
+        // Color mapping
+        const continentColors = {
+            'North America': '#ff7f0e',
+            'South America': '#2ca02c', 
+            'Europe': '#1f77b4',
+            'Asia': '#d62728',
+            'Africa': '#9467bd',
+            'Oceania': '#8c564b'
+        };
+
+        // Create graph data
+        const graphData = {
+            nodes: countryData.map(country => ({
+                id: country.id,
+                name: country.name,
+                expenditure: country.expenditure,
+                continent: country.continent
+            })),
+            links: []
+        };
+
+        // Initialize 3D graph
+        const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
+            .width(window.innerWidth)
+            .height(window.innerHeight)
+            .backgroundColor('#f0f0f0')
+            .showNavInfo(false)
+            .graphData(graphData)
+            .nodeLabel(node => `${node.name}<br/>Expenditure: $${(node.expenditure / 1e9).toFixed(1)}B`)
+            .nodeVal(node => Math.sqrt(node.expenditure / 1e8)) // Scale node size
+            .nodeColor(node => continentColors[node.continent] || '#999999')
+            .onNodeClick(node => {
+                document.getElementById('selectedNode').textContent = node.name;
+            });
+
+        // Update statistics
+        function updateStats() {
+            const totalExpenditure = countryData.reduce((sum, country) => sum + country.expenditure, 0);
+            document.getElementById('countryCount').textContent = countryData.length;
+            document.getElementById('totalExpenditure').textContent = `$${(totalExpenditure / 1e9).toFixed(1)}B`;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            Graph.width(window.innerWidth).height(window.innerHeight);
+        });
+
+        // Initialize
+        updateStats();
+        
+        console.log('3D Trade Network loaded successfully!');
+        console.log('Countries:', countryData.length);
+        console.log('Total expenditure:', countryData.reduce((sum, c) => sum + c.expenditure, 0));
+    </script>
+</body>
+</html> 

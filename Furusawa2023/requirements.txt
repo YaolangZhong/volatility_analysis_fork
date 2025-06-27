@@ -5,3 +5,8 @@ pandas
 scipy
 matplotlib
 numba
+fastapi
+uvicorn[standard]
+pydantic
+openpyxl
+requests

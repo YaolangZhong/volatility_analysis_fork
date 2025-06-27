@@ -14,7 +14,7 @@ def solve_price_and_cost(
     pim:        np.ndarray,  # (N,N,S) baseline πm^{0m}_{ins}
     kf_hat:     np.ndarray,     #  (N,N,S)
     km_hat:     np.ndarray,     #  (N,N,S)
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     # Step 1: Compute cost of input bundles (c_hat) (Equation (10) in CP(2015))
     log_w_hat = np.log(w_hat)  # shape: (N,)
     log_Pm_hat = np.log(Pm_hat)  # shape: (N, J)
@@ -235,7 +235,8 @@ def generate_equilibrium(
     df_hat:          np.ndarray,   # (N,N,S) trade-cost shocks d̂_{nis}
     dm_hat:          np.ndarray,   # (N,N,S) trade-cost shocks d̂_{nis}
     tilde_tau_hat:   np.ndarray,     # (N,N,S) 1+τ′_{nis}
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, 
+           np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
            np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     kf_hat = lambda_hat**(-1/theta) * (df_hat * tilde_tau_hat)
     km_hat = lambda_hat**(-1/theta) * (dm_hat * tilde_tau_hat)
@@ -253,10 +254,10 @@ def generate_equilibrium(
     D_prime = IM - EX
     #D_prime = calc_D_prime(pi_prime, tilde_tau_prime, X_prime)
     p_index = np.exp((alpha * np.log(Pf_hat)).sum(axis=1))  # Cobb-Douglas CPI
-    real_w  = w_hat / p_index
+    real_w_hat  = w_hat / p_index
     X_prime = Xf_prime + Xm_prime
     Xf_prod_prime = calc_production(Xf_prime, pif)
     Xm_prod_prime = calc_production(Xm_prime, pim)
     X_prod_prime = Xf_prod_prime + Xm_prod_prime
 
-    return (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, Xf_prime, Xm_prime, D_prime, p_index, real_w, X_prime, Xf_prod_prime, Xm_prod_prime, X_prod_prime)
+    return (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, Xf_prime, Xm_prime, D_prime, p_index, real_w_hat, X_prime, Xf_prod_prime, Xm_prod_prime, X_prod_prime)
