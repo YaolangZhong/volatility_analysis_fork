@@ -10,6 +10,10 @@ import numpy as np
 import json
 from typing import Dict, List, Any, Optional
 from models import ModelParams, ModelSol
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent / "API"))
+
 from model_pipeline import ModelPipeline
 
 

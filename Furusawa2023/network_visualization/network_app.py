@@ -11,9 +11,13 @@ import numpy as np
 from typing import List, Optional
 
 # Import our modules
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent / "API"))
+
 from model_pipeline import (
-    get_model_pipeline, 
-    solve_benchmark_cached, 
+    get_model_pipeline,
+    solve_benchmark_cached,
     solve_counterfactual_cached
 )
 from network_graph import NetworkGraphEngine

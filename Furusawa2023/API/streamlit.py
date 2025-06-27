@@ -50,7 +50,7 @@ if USE_API:
         st.error(f"API connection failed: {e}")
         API_AVAILABLE = False
 else:
-    # Use original local modules
+    # Use local modules (model_pipeline is now in same directory)
     from model_pipeline import (
         get_model_pipeline, 
         solve_benchmark_cached, 

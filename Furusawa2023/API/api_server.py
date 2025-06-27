@@ -30,6 +30,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
+# model_pipeline is now in the same directory
 from model_pipeline import (
     get_model_pipeline,
     solve_benchmark_cached,
