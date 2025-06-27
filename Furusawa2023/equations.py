@@ -169,14 +169,14 @@ def calc_X_prime(
                     diff = tmp
 
         if diff < tol:
-            return (Xf_prime_new, Xm_prime_new)
+            return (Xf_prime_new, Xm_prime_new, I_prime, Term_1)
 
         # Update for next iteration
         Xf_prime = Xf_prime_new.copy()
         Xm_prime = Xm_prime_new.copy()
 
     print("Max iterations reached")
-    return (Xf_prime_new, Xm_prime_new)
+    return (Xf_prime_new, Xm_prime_new, I_prime, Term_1)
 
 
 
@@ -237,7 +237,7 @@ def generate_equilibrium(
     tilde_tau_hat:   np.ndarray,     # (N,N,S) 1+τ′_{nis}
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, 
            np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
-           np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+           np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     kf_hat = lambda_hat**(-1/theta) * (df_hat * tilde_tau_hat)
     km_hat = lambda_hat**(-1/theta) * (dm_hat * tilde_tau_hat)
     c_hat, Pf_hat, Pm_hat = solve_price_and_cost(w_hat, Pm_hat, beta, gamma, theta, pif, pim, kf_hat, km_hat)
@@ -246,7 +246,7 @@ def generate_equilibrium(
     pif_prime = pif * pif_hat
     pim_prime = pim * pim_hat
     tilde_tau_prime = tilde_tau * tilde_tau_hat
-    Xf_prime, Xm_prime = calc_X_prime(alpha, gamma, pif_prime, pim_prime, tilde_tau_prime , w_hat, V, Xf, Xm, D)
+    Xf_prime, Xm_prime, I_prime, output_prime = calc_X_prime(alpha, gamma, pif_prime, pim_prime, tilde_tau_prime , w_hat, V, Xf, Xm, D)
     EX = np.einsum('inj,inj,ij->n', pif_prime, 1 / tilde_tau_prime, Xf_prime) + \
         np.einsum('inj,inj,ij->n', pim_prime, 1 / tilde_tau_prime, Xm_prime)
     IM = np.einsum('nij,nij,nj->n', pif_prime, 1 / tilde_tau_prime, Xf_prime) + \
@@ -255,9 +255,10 @@ def generate_equilibrium(
     #D_prime = calc_D_prime(pi_prime, tilde_tau_prime, X_prime)
     p_index = np.exp((alpha * np.log(Pf_hat)).sum(axis=1))  # Cobb-Douglas CPI
     real_w_hat  = w_hat / p_index
+    real_I_prime = I_prime / p_index
     X_prime = Xf_prime + Xm_prime
     Xf_prod_prime = calc_production(Xf_prime, pif)
     Xm_prod_prime = calc_production(Xm_prime, pim)
     X_prod_prime = Xf_prod_prime + Xm_prod_prime
 
-    return (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, Xf_prime, Xm_prime, D_prime, p_index, real_w_hat, X_prime, Xf_prod_prime, Xm_prod_prime, X_prod_prime)
+    return (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, Xf_prime, Xm_prime, D_prime, p_index, real_w_hat, X_prime, Xf_prod_prime, Xm_prod_prime, X_prod_prime, I_prime, output_prime, real_I_prime)

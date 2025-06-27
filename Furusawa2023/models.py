@@ -64,6 +64,9 @@ MODEL_VARIABLES = {
     'Xf_prod_prime': VarInfo('Xf_prod_prime', '(N, S)', 'New final goods production value in sector s in country n', 'Xf_prod_prime[country, sector]', 'sol'),
     'Xm_prod_prime': VarInfo('Xm_prod_prime', '(N, S)', 'New intermediate goods production value in sector s in country n', 'Xm_prod_prime[country, sector]', 'sol'),
     'X_prod_prime': VarInfo('X_prod_prime', '(N, S)', 'New total production value in sector s in country n', 'X_prod_prime[country, sector]', 'sol'),
+    'I_prime': VarInfo('I_prime', '(N,)', 'New income in country n', 'I_prime[country]', 'sol'),
+    'output_prime': VarInfo('output_prime', '(N, S)', 'New output demand in sector s in country n', 'output_prime[country, sector]', 'sol'),
+    'real_I_prime': VarInfo('real_I_prime', '(N,)', 'New real income in country n', 'real_I_prime[country]', 'sol'),
 }
 
 class ModelRegistry:
@@ -545,6 +548,9 @@ class ModelSol(NpzMixin):
     Xf_prod_prime: np.ndarray  # shape (N, S)
     Xm_prod_prime: np.ndarray  # shape (N, S)
     X_prod_prime: np.ndarray  # shape (N, S)
+    I_prime: np.ndarray  # shape (N,)
+    output_prime: np.ndarray  # shape (N, S)
+    real_I_prime: np.ndarray  # shape (N,)
     
 
     # ------------------------------------------------------------------
@@ -620,6 +626,9 @@ class Model:
             Xf_prod_prime = np.ones((N,S)),
             Xm_prod_prime = np.ones((N,S)),
             X_prod_prime = np.ones((N,S)),
+            I_prime = np.ones(N),
+            output_prime = np.ones((N,S)),
+            real_I_prime = np.ones(N),
         )
     
     def summary(self) -> str:

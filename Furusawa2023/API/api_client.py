@@ -94,7 +94,7 @@ class ModelAPIClient:
         return self._get_solution_and_params(scenario_key)
     
     def solve_counterfactual(self, importers: List[str], exporters: List[str], 
-                           sectors: List[str], tariff_rate: float) -> str:
+                           sectors: List[str], tariff_data: Dict) -> str:
         """
         Solve counterfactual model via API.
         Returns scenario key for later retrieval.
@@ -103,7 +103,7 @@ class ModelAPIClient:
             "importers": importers,
             "exporters": exporters,
             "sectors": sectors,
-            "tariff_rate": tariff_rate
+            "tariff_data": tariff_data
         }
         
         response = self._make_request("POST", "/counterfactual/solve", json=request_data)
@@ -134,7 +134,18 @@ class ModelAPIClient:
             var_data = var_response.json()
             solution_data[var_name] = np.array(var_data["data"])
         
-        # Create ModelSol object
+        # Create ModelSol object with fallback for missing fields
+        # Add default values for new fields if they're not in the API response
+        required_fields = {
+            'I_prime': np.ones(N),
+            'output_prime': np.ones((N, S)),
+            'real_I_prime': np.ones(N)
+        }
+        
+        for field_name, default_value in required_fields.items():
+            if field_name not in solution_data:
+                solution_data[field_name] = default_value
+        
         sol = ModelSol(**solution_data)
         
         # Create minimal ModelParams for compatibility
@@ -232,21 +243,22 @@ def solve_benchmark_cached(use_api: bool = False, api_url: str = "http://localho
 
 
 def solve_counterfactual_cached(importers: List[str], exporters: List[str], 
-                              sectors: List[str], tariff_rate: float,
-                              use_api: bool = False, api_url: str = "http://localhost:8000") -> Tuple[ModelSol, ModelParams]:
+                              sectors: List[str], tariff_data: Dict,
+                              use_api: bool = False, api_url: str = "http://localhost:8000") -> Tuple[Optional[ModelSol], Optional[ModelParams]]:
     """
     Solve counterfactual model - API or local version.
     This maintains compatibility with the original function signature.
     """
     if use_api:
         client = ModelAPIClient(api_url)
-        scenario_key = client.solve_counterfactual(importers, exporters, sectors, tariff_rate)
-        return client.get_counterfactual_results(scenario_key)
+        scenario_key = client.solve_counterfactual(importers, exporters, sectors, tariff_data)
+        sol, params = client.get_counterfactual_results(scenario_key)
+        return sol, params
     else:
         # Use local pipeline
         from model_pipeline import get_model_pipeline as get_local_pipeline
         pipeline = get_local_pipeline()
-        scenario_key = pipeline.solve_counterfactual(importers, exporters, sectors, tariff_rate)
+        scenario_key = pipeline.solve_counterfactual(importers, exporters, sectors, tariff_data)
         return pipeline.get_counterfactual_results(scenario_key)
 
 

@@ -1,0 +1,11 @@
+[server]
+headless = true
+maxUploadSize = 50
+enableCORS = false
+enableXsrfProtection = false
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "light" 

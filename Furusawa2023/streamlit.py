@@ -20,7 +20,7 @@ def main():
     script_dir = Path(__file__).parent
     
     # Path to the streamlit app in API directory
-    app_path = script_dir / "API" / "streamlit.py"
+    app_path = script_dir / "API" / "app.py"
     
     if not app_path.exists():
         print(f"❌ Error: Streamlit app not found at {app_path}")
@@ -33,11 +33,11 @@ def main():
     try:
         print("🚀 Starting Enhanced Economic Model Streamlit App...")
         print(f"📁 Working directory: {os.getcwd()}")
-        print(f"🎯 Running: streamlit run streamlit.py")
+        print(f"🎯 Running: streamlit run app.py")
         print("-" * 50)
         
         subprocess.run([
-            sys.executable, "-m", "streamlit", "run", "streamlit.py"
+            sys.executable, "-m", "streamlit", "run", "app.py"
         ], check=True)
         
     except KeyboardInterrupt:

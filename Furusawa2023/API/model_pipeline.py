@@ -15,6 +15,10 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple, cast
 from copy import deepcopy
 import streamlit as st
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+
 from models import ModelParams, Model, ModelSol
 from solvers import ModelSolver
 
@@ -60,7 +64,24 @@ class ModelResultStorage:
 class BenchmarkModelSolver:
     """Handles solving and caching of the benchmark model."""
     
-    def __init__(self, data_file_name: str = "data.npz"):
+    def __init__(self, data_file_name: str = "../data.npz"):
+        # Handle different deployment environments
+        if not Path(data_file_name).exists():
+            # Try alternative paths for deployment
+            possible_paths = [
+                data_file_name,
+                "data.npz",
+                "../data.npz", 
+                "Furusawa2023/data.npz",
+                str(Path(__file__).parent.parent / "data.npz")
+            ]
+            for path in possible_paths:
+                if Path(path).exists():
+                    data_file_name = path
+                    break
+            else:
+                raise FileNotFoundError(f"Could not find data file. Tried: {possible_paths}")
+        
         self.data_file_name = data_file_name
         self._solution: Optional[ModelSol] = None
         self._params: Optional[ModelParams] = None
@@ -76,6 +97,9 @@ class BenchmarkModelSolver:
             self._solution = model.sol
             self._is_solved = True
         
+        # Ensure we return non-None values
+        if self._solution is None or self._params is None:
+            raise RuntimeError("Failed to solve benchmark model")
         return self._solution, self._params
     
     def get_cached_solution(self) -> Tuple[ModelSol, ModelParams]:
@@ -101,7 +125,7 @@ class CounterfactualModelSolver:
                             importers: List[str], 
                             exporters: List[str], 
                             sectors: List[str], 
-                            tariff_rate: float) -> ModelSol:
+                            tariff_data: dict) -> ModelSol:
         """
         Solve counterfactual model with specified tariff changes.
         
@@ -109,13 +133,27 @@ class CounterfactualModelSolver:
             importers: List of importing country names
             exporters: List of exporting country names  
             sectors: List of sector names affected
-            tariff_rate: Tariff rate change as percentage (e.g., 20 for 20%)
+            tariff_data: Dict mapping either:
+                - (importer, exporter) pairs to tariff rates (for country-based)
+                - (importer, exporter, sector) triplets to tariff rates (for country-sector-based)
+                - (importer, sector) pairs to tariff rates (for simple sector-based)
         
         Returns:
             ModelSol: Solution of the counterfactual model
         """
         # Create modified tariff matrix
         tilde_tau_1 = self.benchmark_params.tilde_tau.copy()
+        
+        # Determine tariff data format based on key structure
+        sample_key = next(iter(tariff_data.keys())) if tariff_data else None
+        if sample_key is None:
+            # No tariff changes, solve with original parameters
+            cf_model = Model(self.benchmark_params)
+            cf_solver = ModelSolver(cf_model)
+            cf_solver.solve()
+            return cf_model.sol
+            
+        key_length = len(sample_key)
         
         for importer in importers:
             for exporter in exporters:
@@ -125,6 +163,20 @@ class CounterfactualModelSolver:
                     s = self.sector_names.index(sector)
                     
                     if i != j:  # Don't modify domestic trade
+                        if key_length == 3:
+                            # Country-sector-based: (importer, exporter, sector) → rate
+                            tariff_rate = tariff_data.get((importer, exporter, sector), 0)
+                        elif key_length == 2:
+                            # Check if it's (importer, exporter) or (importer, sector)
+                            if (importer, exporter) in tariff_data:
+                                # Country-based: (importer, exporter) → rate (applied to all sectors)
+                                tariff_rate = tariff_data.get((importer, exporter), 0)
+                            else:
+                                # Simple sector-based: (importer, sector) → rate (applied to all exporters)
+                                tariff_rate = tariff_data.get((importer, sector), 0)
+                        else:
+                            tariff_rate = 0
+                        
                         tilde_tau_1[i, j, s] = (
                             self.benchmark_params.tilde_tau[i, j, s] + (tariff_rate / 100.0)
                         )
@@ -142,12 +194,18 @@ class CounterfactualModelSolver:
                             importers: List[str], 
                             exporters: List[str], 
                             sectors: List[str], 
-                            tariff_rate: float) -> str:
+                            tariff_data: dict) -> str:
         """Generate a unique key for a counterfactual scenario."""
         imp_str = "_".join(sorted(importers))
         exp_str = "_".join(sorted(exporters))
         sec_str = "_".join(sorted(sectors))
-        return f"tariff_{tariff_rate}_{imp_str}_to_{exp_str}_sectors_{sec_str}"
+        
+        # Create a hash of the tariff data to make the key unique
+        import hashlib
+        tariff_str = str(sorted(tariff_data.items()))
+        tariff_hash = hashlib.md5(tariff_str.encode()).hexdigest()[:8]
+        
+        return f"tariff_{tariff_hash}_{imp_str}_to_{exp_str}_sectors_{sec_str}"
 
 
 class ModelPipeline:
@@ -155,7 +213,24 @@ class ModelPipeline:
     Main pipeline class that orchestrates benchmark and counterfactual model solving.
     """
     
-    def __init__(self, data_file_name: str = "data.npz"):
+    def __init__(self, data_file_name: str = "../data.npz"):
+        # Handle different deployment environments
+        if not Path(data_file_name).exists():
+            # Try alternative paths for deployment
+            possible_paths = [
+                data_file_name,
+                "data.npz",
+                "../data.npz", 
+                "Furusawa2023/data.npz",
+                str(Path(__file__).parent.parent / "data.npz")
+            ]
+            for path in possible_paths:
+                if Path(path).exists():
+                    data_file_name = path
+                    break
+            else:
+                raise FileNotFoundError(f"Could not find data file. Tried: {possible_paths}")
+        
         self.benchmark_solver = BenchmarkModelSolver(data_file_name)
         self.storage = ModelResultStorage()
         self._counterfactual_solver: Optional[CounterfactualModelSolver] = None
@@ -176,7 +251,7 @@ class ModelPipeline:
                            importers: List[str], 
                            exporters: List[str], 
                            sectors: List[str], 
-                           tariff_rate: float) -> str:
+                           tariff_data: dict) -> str:
         """
         Solve counterfactual scenario and return storage key.
         
@@ -191,7 +266,7 @@ class ModelPipeline:
         
         # Generate unique key for this scenario
         key = self._counterfactual_solver.generate_scenario_key(
-            importers, exporters, sectors, tariff_rate
+            importers, exporters, sectors, tariff_data
         )
         
         # Check if already solved
@@ -201,7 +276,7 @@ class ModelPipeline:
         
         # Solve and store
         cf_solution = self._counterfactual_solver.solve_tariff_scenario(
-            importers, exporters, sectors, tariff_rate
+            importers, exporters, sectors, tariff_data
         )
         
         # Create modified params for storage (though solution is what matters)
@@ -245,7 +320,7 @@ def solve_benchmark_cached() -> Tuple[ModelSol, ModelParams]:
 def solve_counterfactual_cached(importers: List[str], 
                               exporters: List[str], 
                               sectors: List[str], 
-                              tariff_rate: float) -> str:
+                              tariff_data: dict) -> str:
     """Cached function to solve counterfactual model."""
     pipeline = get_model_pipeline()
-    return pipeline.solve_counterfactual(importers, exporters, sectors, tariff_rate) 
+    return pipeline.solve_counterfactual(importers, exporters, sectors, tariff_data) 
