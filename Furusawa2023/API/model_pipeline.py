@@ -316,6 +316,30 @@ def solve_benchmark_cached() -> Tuple[ModelSol, ModelParams]:
     return pipeline.ensure_benchmark_solved()
 
 
+@st.cache_data
+def get_metadata_cached() -> Tuple[List[str], List[str], int, int]:
+    """Cached function to get model metadata without solving."""
+    # Load just the parameters to get metadata
+    from pathlib import Path
+    data_paths = [
+        "data.npz",
+        "../data.npz", 
+        "Furusawa2023/data.npz"
+    ]
+    data_file = None
+    for path in data_paths:
+        if Path(path).exists():
+            data_file = path
+            break
+    
+    if data_file is None:
+        raise FileNotFoundError("Could not find data.npz file")
+    
+    from models import ModelParams
+    params = ModelParams.load_from_npz(data_file)
+    return list(params.country_list), list(params.sector_list), params.N, params.S
+
+
 @st.cache_data  
 def solve_counterfactual_cached(importers: List[str], 
                               exporters: List[str], 

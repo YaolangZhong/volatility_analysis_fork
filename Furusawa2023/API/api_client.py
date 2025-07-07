@@ -139,7 +139,9 @@ class ModelAPIClient:
         required_fields = {
             'I_prime': np.ones(N),
             'output_prime': np.ones((N, S)),
-            'real_I_prime': np.ones(N)
+            'real_I_prime': np.ones(N),
+            'pif_prime': np.ones((N, N, S)) / N,
+            'pim_prime': np.ones((N, N, S)) / N
         }
         
         for field_name, default_value in required_fields.items():

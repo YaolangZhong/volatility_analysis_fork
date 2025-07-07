@@ -35,7 +35,7 @@ class ModelSolver:
         wfmax = 1.0
         iteration = 1
         while iteration <= max_iter and wfmax > tol:
-            (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, Xf_prime, Xm_prime, D_prime, p_index, real_w_hat, X_prime, Xf_prod_prime, Xm_prod_prime, X_prod_prime, I_prime, output_prime, real_I_prime) = generate_equilibrium(
+            (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, pif_prime, pim_prime, Xf_prime, Xm_prime, D_prime, p_index, real_w_hat, X_prime, Xf_prod_prime, Xm_prod_prime, X_prod_prime, I_prime, output_prime, real_I_prime) = generate_equilibrium(
                 w_hat, Pm_hat_old, alpha, beta, gamma, theta, pif, pim, tilde_tau, V, D, Xf, Xm, lambda_hat, df_hat, dm_hat, tilde_tau_hat)
             w_grad = (D - D_prime) / V * vfactor
             Xf = Xf_prime        # latest expenditure becomes next-round initial guess
@@ -65,6 +65,8 @@ class ModelSolver:
             Pm_hat   = Pm_hat,
             pif_hat  = pif_hat,
             pim_hat  = pim_hat,
+            pif_prime = pif_prime,
+            pim_prime = pim_prime,
             Xf_prime = Xf_prime,
             Xm_prime = Xm_prime,
             p_index = p_index,

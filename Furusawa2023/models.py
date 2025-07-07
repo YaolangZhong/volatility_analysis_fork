@@ -55,6 +55,8 @@ MODEL_VARIABLES = {
     'Pm_hat': VarInfo('Pm_hat', '(N, S)', 'Intermediate goods price index change in sector s in country n', 'Pm_hat[country, sector]', 'sol'),
     'pif_hat': VarInfo('pif_hat', '(N, N, S)', 'Final goods trade share change from exporter i to importer n in sector s', 'pif_hat[importer, exporter, sector]', 'sol'),
     'pim_hat': VarInfo('pim_hat', '(N, N, S)', 'Intermediate goods trade share change from exporter i to importer n in sector s', 'pim_hat[importer, exporter, sector]', 'sol'),
+    'pif_prime': VarInfo('pif_prime', '(N, N, S)', 'New final goods trade share from exporter i to importer n in sector s', 'pif_prime[importer, exporter, sector]', 'sol'),
+    'pim_prime': VarInfo('pim_prime', '(N, N, S)', 'New intermediate goods trade share from exporter i to importer n in sector s', 'pim_prime[importer, exporter, sector]', 'sol'),
     'Xf_prime': VarInfo('Xf_prime', '(N, S)', 'New final goods expenditure in sector s in country n', 'Xf_prime[country, sector]', 'sol'),
     'Xm_prime': VarInfo('Xm_prime', '(N, S)', 'New intermediate goods expenditure in sector s in country n', 'Xm_prime[country, sector]', 'sol'),
     'X_prime': VarInfo('X_prime', '(N, S)', 'New total expenditure in sector s in country n', 'X_prime[country, sector]', 'sol'),
@@ -539,6 +541,8 @@ class ModelSol(NpzMixin):
     Pm_hat:    np.ndarray  # shape (N, S)
     pif_hat:   np.ndarray  # shape (N, N, S)
     pim_hat:   np.ndarray  # shape (N, N, S)
+    pif_prime: np.ndarray  # shape (N, N, S)
+    pim_prime: np.ndarray  # shape (N, N, S)
     Xf_prime:  np.ndarray  # shape (N, S)
     Xm_prime:  np.ndarray  # shape (N, S)
     X_prime:   np.ndarray  # shape (N, S)
@@ -617,6 +621,8 @@ class Model:
             Pm_hat   = np.ones((N,S)),
             pif_hat  = np.ones((N,N,S)),
             pim_hat  = np.ones((N,N,S)),
+            pif_prime = np.ones((N,N,S)),
+            pim_prime = np.ones((N,N,S)),
             Xf_prime = np.ones((N,S)),
             Xm_prime = np.ones((N,S)),
             X_prime = np.ones((N,S)),

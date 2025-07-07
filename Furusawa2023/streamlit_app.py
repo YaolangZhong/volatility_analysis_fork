@@ -26,19 +26,17 @@ def main():
         print(f"❌ Error: Streamlit app not found at {app_path}")
         sys.exit(1)
     
-    # Change to the API directory for proper imports
-    os.chdir(script_dir / "API")
-    
-    # Launch streamlit
+    # Launch streamlit from project root (better for deployment compatibility)
     try:
         print("🚀 Starting Enhanced Economic Model Streamlit App...")
-        print(f"📁 Working directory: {os.getcwd()}")
-        print(f"🎯 Running: streamlit run app.py")
+        print(f"📁 Working directory: {script_dir}")
+        print(f"🎯 Running: streamlit run API/app.py")
+        print("💡 For deployment, use API/app.py as the main entry point")
         print("-" * 50)
         
         subprocess.run([
-            sys.executable, "-m", "streamlit", "run", "app.py"
-        ], check=True)
+            sys.executable, "-m", "streamlit", "run", str(app_path)
+        ], check=True, cwd=script_dir)
         
     except KeyboardInterrupt:
         print("\n🛑 App stopped by user")

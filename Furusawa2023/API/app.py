@@ -31,54 +31,49 @@ API_URL = st.sidebar.text_input("API Server URL", value="http://localhost:8000",
 # Add parent directory to path for imports
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent))
+
+# Ensure parent directory is in path for imports (works both locally and in deployment)
+current_dir = Path(__file__).parent
+parent_dir = current_dir.parent
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
 
 # Always import local modules for type hints and fallback
-sys.path.append(str(Path(__file__).parent.parent))
 from model_pipeline import (
     get_model_pipeline, 
     solve_benchmark_cached, 
-    solve_counterfactual_cached
+    solve_counterfactual_cached,
+    get_metadata_cached
 )
 from visualization import ModelVisualizationEngine
 from models import ModelSol, ModelParams
 
-# Import appropriate modules based on mode
+# Import API client for API mode
+api_client = None
+API_AVAILABLE = False
 if USE_API:
     try:
-        from api_client import (
-            ModelAPIClient, 
-            APIError, 
-            test_api_connection
-        )
+        from api_client import ModelAPIClient
         api_client = ModelAPIClient(API_URL)
-        API_AVAILABLE = api_client.health_check()
+        # Test if API is available
+        try:
+            api_client.get_metadata()
+            API_AVAILABLE = True
+        except:
+            API_AVAILABLE = False
     except ImportError:
-        st.error("API client not available. Please install required dependencies.")
+        st.sidebar.error("API client not available. Install required dependencies.")
         API_AVAILABLE = False
-        api_client = None
-    except Exception as e:
-        st.error(f"API connection failed: {e}")
-        API_AVAILABLE = False
-        api_client = None
-else:
-    API_AVAILABLE = True  # Local mode is always available
-    api_client = None
 
 def show_api_status():
     """Show API connection status in sidebar."""
     if USE_API:
-        if API_AVAILABLE and api_client is not None:
-            st.sidebar.success("✅ API Connected")
-            try:
-                metadata = api_client.get_metadata()  # type: ignore
-                st.sidebar.info(f"📊 {metadata['N']} countries, {metadata['S']} sectors")
-            except:
-                st.sidebar.warning("⚠️ API metadata unavailable")
+        if API_AVAILABLE:
+            st.sidebar.success(f"✅ API Connected: {API_URL}")
         else:
-            st.sidebar.error("❌ API Unavailable")
+            st.sidebar.error(f"❌ API Unavailable: {API_URL}")
     else:
-        st.sidebar.info("🏠 Local Mode")
+        st.sidebar.info("🔧 Local Mode Active")
 
 def get_country_sector_names():
     """Get country and sector names - works with both API and local mode."""
@@ -90,8 +85,9 @@ def get_country_sector_names():
             st.error(f"Failed to get metadata from API: {e}")
             return [], []
     else:
-        _, params = solve_benchmark_cached()
-        return list(params.country_list), list(params.sector_list)
+        # Use cached metadata that doesn't require solving the model
+        countries, sectors, N, S = get_metadata_cached()
+        return countries, sectors
 
 def solve_benchmark_unified():
     """Solve benchmark model - unified interface for API/local."""
