@@ -557,6 +557,7 @@ class ModelSol(NpzMixin):
     output_prime: np.ndarray  # shape (N, S)
     real_I_prime: np.ndarray  # shape (N,)
     sector_links: np.ndarray  # shape (N, S, N, S)
+    country_links: np.ndarray  # shape (N, N)
     
 
     # ------------------------------------------------------------------
@@ -638,6 +639,7 @@ class Model:
             output_prime = np.ones((N,S)),
             real_I_prime = np.ones(N),
             sector_links = np.ones((N, S, N, S)),
+            country_links = np.ones((N, N)),
         )
     
     def summary(self) -> str:

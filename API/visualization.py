@@ -62,7 +62,9 @@ class VisualizationDataProcessor:
             "D_prime": r"""$D'$: shape $(N,)$, index ($i$)<br>Trade deficit or surplus in country $i$ under model 2 (the counterfactual scenario).""",
             "I_prime": r"""$I'$: shape $(N,)$, index ($i$)<br>Total income in country $i$ under the counterfactual scenario (includes wage income and tariff revenue).""",
             "output_prime": r"""$\text{Output}'$: shape $(N, S)$, indices ($i$, $s$)<br>Output demand in country $i$, sector $s$ under the counterfactual scenario (intermediate variable from expenditure calculation).""",
-            "real_I_prime": r"""$\text{Real I}'$: shape $(N,)$, index ($i$)<br>Real income in country $i$ under the counterfactual scenario (nominal income deflated by the price index)."""
+            "real_I_prime": r"""$\text{Real I}'$: shape $(N,)$, index ($i$)<br>Real income in country $i$ under the counterfactual scenario (nominal income deflated by the price index).""",
+            "sector_links": r"""$\text{Sector Links}$: shape $(N, S, N, S)$, indices ($i$, $k$, $n$, $s$)<br>Import linkages where sector $k$ of country $i$ imports from sector $s$ in country $n$.""",
+            "country_links": r"""$\text{Country Links}$: shape $(N, N)$, indices ($i$, $n$)<br>Country-level import linkages where country $i$ imports from country $n$ (sum of all sector-level linkages)."""
         }
         return descriptions.get(variable_name, f"Variable: {variable_name}")
 
@@ -304,7 +306,15 @@ class ModelVisualizationEngine:
         if isinstance(value, np.ndarray) and value.ndim == 1:
             self._visualize_1d_variable(value, variable_name, is_percentage_change)
         elif isinstance(value, np.ndarray) and value.ndim == 2:
-            self._visualize_2d_variable(value, variable_name, is_percentage_change)
+            if variable_name == 'country_links':
+                # country_links should not be visualized, only available for download
+                st.info("🔗 **Country Links** is available for Excel download but not for interactive visualization.")
+                st.markdown("**To access country_links data:**")
+                st.markdown("- Use the Excel download button to get the country-country matrix")
+                st.markdown("- Rows and columns represent countries") 
+                st.markdown("- Values show import linkages between countries")
+            else:
+                self._visualize_2d_variable(value, variable_name, is_percentage_change)
         elif isinstance(value, np.ndarray) and value.ndim == 3:
             self._visualize_3d_variable(value, variable_name, is_percentage_change)
         elif isinstance(value, np.ndarray) and value.ndim == 4:
@@ -315,6 +325,7 @@ class ModelVisualizationEngine:
                 st.markdown("- Use the Excel download button to get the flattened country-sector matrix")
                 st.markdown("- Rows and columns represent country-sector combinations") 
                 st.markdown("- Values show import linkages between country-sector pairs")
+
             else:
                 # Generic 4D handling - show basic statistics
                 st.write(f"4D Variable: {variable_name}")
@@ -416,29 +427,42 @@ def create_excel_download_button(sol: ModelSol, params: ModelParams, scenario_ke
             if variable_name:
                 # Download specific variable
                 data = getattr(sol, variable_name)
+                
+                # Calculate percentage change if baseline is provided
+                data_to_use = data
+                if baseline_sol is not None and hasattr(baseline_sol, variable_name):
+                    baseline_value = getattr(baseline_sol, variable_name)
+                    # Calculate percentage change: 100 * (counterfactual - baseline) / baseline
+                    data_to_use = 100 * (data - baseline_value) / (np.abs(baseline_value) + 1e-8)
+                
                 if variable_name == 'sector_links':
                     # Flatten sector_links for visualization
-                    flattened_data, row_labels, col_labels = flatten_sector_links_for_viz(data, params)
+                    flattened_data, row_labels, col_labels = flatten_sector_links_for_viz(data_to_use, params)
                     df = pd.DataFrame(flattened_data, index=row_labels, columns=col_labels)
                     df.to_excel(writer, sheet_name=variable_name)
-                elif len(data.shape) == 1:
+                elif variable_name == 'country_links':
+                    # Flatten country_links for visualization
+                    flattened_data, row_labels, col_labels = flatten_country_links_for_viz(data_to_use, params)
+                    df = pd.DataFrame(flattened_data, index=row_labels, columns=col_labels)
+                    df.to_excel(writer, sheet_name=variable_name)
+                elif len(data_to_use.shape) == 1:
                     # 1D array - country-level data
                     df = pd.DataFrame({
                         'Country': list(params.country_list),
-                        variable_name: data
+                        variable_name: data_to_use
                     })
                     df.to_excel(writer, sheet_name=variable_name, index=False)
-                elif len(data.shape) == 2:
+                elif len(data_to_use.shape) == 2:
                     # 2D array - country x sector data
                     df = pd.DataFrame(
-                        data, 
+                        data_to_use, 
                         index=list(params.country_list),
                         columns=list(params.sector_list)
                     )
                     df.to_excel(writer, sheet_name=variable_name)
-                elif len(data.shape) == 3:
+                elif len(data_to_use.shape) == 3:
                     # 3D array - handle trade data specially
-                    N, _, S = data.shape
+                    N, _, S = data_to_use.shape
                     rows = []
                     for n in range(N):
                         for i in range(N):
@@ -447,7 +471,7 @@ def create_excel_download_button(sol: ModelSol, params: ModelParams, scenario_ke
                                     'Importer': params.country_list[n],
                                     'Exporter': params.country_list[i], 
                                     'Sector': params.sector_list[s],
-                                    variable_name: data[n, i, s]
+                                    variable_name: data_to_use[n, i, s]
                                 })
                     df = pd.DataFrame(rows)
                     df.to_excel(writer, sheet_name=variable_name, index=False)
@@ -458,26 +482,38 @@ def create_excel_download_button(sol: ModelSol, params: ModelParams, scenario_ke
                         data = getattr(sol, var_name)
                         if isinstance(data, np.ndarray):
                             try:
+                                # Calculate percentage change if baseline is provided
+                                data_to_use = data
+                                if baseline_sol is not None and hasattr(baseline_sol, var_name):
+                                    baseline_value = getattr(baseline_sol, var_name)
+                                    # Calculate percentage change: 100 * (counterfactual - baseline) / baseline
+                                    data_to_use = 100 * (data - baseline_value) / (np.abs(baseline_value) + 1e-8)
+                                
                                 if var_name == 'sector_links':
                                     # Flatten sector_links for visualization
-                                    flattened_data, row_labels, col_labels = flatten_sector_links_for_viz(data, params)
+                                    flattened_data, row_labels, col_labels = flatten_sector_links_for_viz(data_to_use, params)
                                     df = pd.DataFrame(flattened_data, index=row_labels, columns=col_labels)
                                     df.to_excel(writer, sheet_name=var_name)
-                                elif len(data.shape) == 1:
+                                elif var_name == 'country_links':
+                                    # Flatten country_links for visualization
+                                    flattened_data, row_labels, col_labels = flatten_country_links_for_viz(data_to_use, params)
+                                    df = pd.DataFrame(flattened_data, index=row_labels, columns=col_labels)
+                                    df.to_excel(writer, sheet_name=var_name)
+                                elif len(data_to_use.shape) == 1:
                                     df = pd.DataFrame({
                                         'Country': list(params.country_list),
-                                        var_name: data
+                                        var_name: data_to_use
                                     })
                                     df.to_excel(writer, sheet_name=var_name, index=False)
-                                elif len(data.shape) == 2:
+                                elif len(data_to_use.shape) == 2:
                                     df = pd.DataFrame(
-                                        data, 
+                                        data_to_use, 
                                         index=list(params.country_list),
                                         columns=list(params.sector_list)
                                     )
                                     df.to_excel(writer, sheet_name=var_name)
-                                elif len(data.shape) == 3:
-                                    N, _, S = data.shape
+                                elif len(data_to_use.shape) == 3:
+                                    N, _, S = data_to_use.shape
                                     rows = []
                                     for n in range(N):
                                         for i in range(N):
@@ -486,7 +522,7 @@ def create_excel_download_button(sol: ModelSol, params: ModelParams, scenario_ke
                                                     'Importer': params.country_list[n],
                                                     'Exporter': params.country_list[i], 
                                                     'Sector': params.sector_list[s],
-                                                    var_name: data[n, i, s]
+                                                    var_name: data_to_use[n, i, s]
                                                 })
                                     df = pd.DataFrame(rows)
                                     df.to_excel(writer, sheet_name=var_name, index=False)
@@ -548,6 +584,37 @@ def flatten_sector_links_for_viz(sector_links: np.ndarray, params: ModelParams) 
     flattened = sector_links.reshape(NS, NS)
     
     return flattened, row_labels, col_labels
+
+
+def flatten_country_links_for_viz(country_links: np.ndarray, params: ModelParams) -> Tuple[np.ndarray, List[str], List[str]]:
+    """
+    Format country_links for visualization as a country × country matrix.
+    
+    Args:
+        country_links: 2D array with shape (importer_country, exporter_country)
+        params: Model parameters containing country list
+        
+    Returns:
+        Tuple of (country_links_array, row_labels, col_labels)
+    """
+    N, _ = country_links.shape
+    
+    # Create labels using actual country names from params
+    row_labels = []  # Importer countries (rows)
+    col_labels = []  # Exporter countries (columns)
+    
+    # Row labels: importer countries
+    for i in range(N):
+        country_name = params.country_list[i] if i < len(params.country_list) else f"Country_{i}"
+        row_labels.append(country_name)
+    
+    # Column labels: exporter countries
+    for j in range(N):
+        country_name = params.country_list[j] if j < len(params.country_list) else f"Country_{j}"
+        col_labels.append(country_name)
+    
+    # country_links is already in the correct 2D format (N, N)
+    return country_links, row_labels, col_labels
 
 
 def create_comparison_plots_section(baseline_sol: ModelSol, cf_sol: ModelSol, params: ModelParams):

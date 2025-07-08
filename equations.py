@@ -268,6 +268,27 @@ def calc_sector_links(
 
     return sector_links
 
+def calc_country_links(sector_links: np.ndarray) -> np.ndarray:
+    """
+    Calculate country-level import linkages by summing sector_links over sectoral dimensions.
+    
+    Parameters
+    ----------
+    sector_links : np.ndarray, shape (N, S, N, S)
+        Sector-level import linkages indexed as (i, k, n, s):
+        sector k of country i imports from sector s in country n
+    
+    Returns
+    -------
+    country_links : np.ndarray, shape (N, N)
+        Country-level import linkages indexed as (i, n):
+        country i imports from country n (sum over all sectors)
+    """
+    # Sum over both sectoral dimensions (axis 1 and axis 3)
+    # sector_links[i, k, n, s] -> sum over k,s -> country_links[i, n]
+    country_links = np.sum(sector_links, axis=(1, 3))
+    return country_links
+
 
 # @njit
 def generate_equilibrium(
@@ -291,7 +312,7 @@ def generate_equilibrium(
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, 
            np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
            np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, 
-           np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+           np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     kf_hat = lambda_hat**(-1/theta) * (df_hat * tilde_tau_hat)
     km_hat = lambda_hat**(-1/theta) * (dm_hat * tilde_tau_hat)
     c_hat, Pf_hat, Pm_hat = solve_price_and_cost(w_hat, Pm_hat, beta, gamma, theta, pif, pim, kf_hat, km_hat)
@@ -316,5 +337,6 @@ def generate_equilibrium(
     Xm_prod_prime = calc_production(Xm_prime, pim, tilde_tau_prime)
     X_prod_prime = Xf_prod_prime + Xm_prod_prime
     sector_links = calc_sector_links(X_prod_prime, gamma, pi_prime)
+    country_links = calc_country_links(sector_links)
 
-    return (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, pif_prime, pim_prime, Xf_prime, Xm_prime, D_prime, p_index, real_w_hat, X_prime, Xf_prod_prime, Xm_prod_prime, X_prod_prime, I_prime, output_prime, real_I_prime, sector_links)
+    return (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, pif_prime, pim_prime, Xf_prime, Xm_prime, D_prime, p_index, real_w_hat, X_prime, Xf_prod_prime, Xm_prod_prime, X_prod_prime, I_prime, output_prime, real_I_prime, sector_links, country_links)
