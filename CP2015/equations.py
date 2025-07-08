@@ -55,17 +55,28 @@ def calc_expenditure_share(
     return num / den                                         # (I,N,S)
 
 def calc_pi_hat(
-    c_hat:      np.ndarray,
-    P_hat:      np.ndarray,
-    theta:      np.ndarray,
-    lambda_hat: np.ndarray,
-    d_hat:      np.ndarray
+    c_hat: np.ndarray,      # (N, S)
+    P_hat: np.ndarray,      # (N, S)
+    theta: np.ndarray,      # (S,)
+    lambda_hat: np.ndarray, # (N, S)
+    d_hat: np.ndarray       # (N, N, S)
 ) -> np.ndarray:
     """
-    Expenditure-share change π̂.  Thin wrapper for compatibility.
+    Calculate expenditure share changes π̂.
+    π̂[n,i,s] = λ̂[i,s] · (ĉ[i,s]·d̂[n,i,s])^(−θ_s) / P̂[n,s]^(−θ_s)
     """
-    return calc_expenditure_share(theta, lambda_hat, c_hat, P_hat, d_hat)
+    inv_theta = -theta[np.newaxis, np.newaxis, :]            # (1,1,S)
 
+    # (ĉ * d̂)^(−θ)   →  (N,N,S)
+    cost_ratio = (c_hat[np.newaxis, :, :] * d_hat) ** inv_theta
+
+    # λ̂ expand to (1,N,S) then multiply
+    num = lambda_hat[np.newaxis, :, :] * cost_ratio          # (N,N,S)
+
+    # denominator P̂^(−θ)  →  (N,1,S)
+    den = P_hat[:, np.newaxis, :] ** inv_theta               # (N,1,S)
+
+    return num / den                                         # (N,N,S)
 
 
 @njit
@@ -193,6 +204,46 @@ def calc_D_prime(
     return D_prime
 
 
+def calc_sector_links(
+    X_prime: np.ndarray,           # shape (N, S), expenditure by country n in sector j  
+    pi_prime: np.ndarray,          # shape (N, N, S), trade shares from country i to n in sector j
+    tilde_tau_prime: np.ndarray,   # shape (N, N, S), tariff factors
+    gamma: np.ndarray              # shape (N, S, S), input-output coefficients
+) -> np.ndarray:
+    """
+    Calculate sector linkages: imports of country n for its output sector k, from country i sector j.
+    
+    Returns:
+        sector_links: np.ndarray with shape (N, S, N, S) and index (n, k, i, j)
+        sector_links[n, k, i, j] = imports of country n for output sector k from country i sector j
+    """
+    N, S = X_prime.shape
+    
+    # Step 1: Calculate imports: X[n,j] * pi[n,i,j] / (1+tau[n,i,j])
+    # imports[n,i,j] = imports of country n from country i in sector j
+    imports = X_prime[:, np.newaxis, :] * pi_prime / tilde_tau_prime  # shape (N, N, S)
+    
+    # Step 2: Expand imports to [n,i,j,:] (add fourth dimension)
+    # imports_expanded[n,i,j,k] = imports[n,i,j] for all k
+    imports_expanded = imports[:, :, :, np.newaxis]  # shape (N, N, S, 1)
+    imports_expanded = np.broadcast_to(imports_expanded, (N, N, S, S))  # shape (N, N, S, S)
+    
+    # Step 3: Expand gamma from [n,j,k] to [n,:,j,k] (expand second dimension)
+    # gamma_expanded[n,i,j,k] = gamma[n,j,k] for all i
+    gamma_expanded = gamma[:, np.newaxis, :, :]  # shape (N, 1, S, S)
+    gamma_expanded = np.broadcast_to(gamma_expanded, (N, N, S, S))  # shape (N, N, S, S)
+    
+    # Step 4: Multiply imports by gamma coefficients
+    # sector_links_temp[n,i,j,k] = imports[n,i,j] * gamma[n,j,k]
+    sector_links_temp = imports_expanded * gamma_expanded  # shape (N, N, S, S)
+    
+    # Step 5: Reshape from (n,i,j,k) to (n,k,i,j) for interpretation
+    # sector_links[n,k,i,j] = country n's imports for output sector k from country i sector j
+    sector_links = sector_links_temp.transpose(0, 3, 1, 2)  # shape (N, S, N, S)
+    
+    return sector_links
+
+
 # @njit
 def generate_equilibrium(
     w_hat:           np.ndarray, 
@@ -210,7 +261,7 @@ def generate_equilibrium(
     d_hat:           np.ndarray,   # (N,N,S) trade-cost shocks d̂_{nis}
     tilde_tau_hat:   np.ndarray,     # (N,N,S) 1+τ′_{nis}
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray,
-           np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+           np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     kappa_hat = lambda_hat**(-1/theta) * (d_hat * tilde_tau_hat)
     c_hat, P_hat = solve_price_and_cost(w_hat, P_hat, beta, gamma, theta, pi, kappa_hat)
     pi_hat   = calc_pi_hat(c_hat, P_hat, theta, lambda_hat, d_hat)
@@ -223,4 +274,5 @@ def generate_equilibrium(
     #D_prime = calc_D_prime(pi_prime, tilde_tau_prime, X_prime)
     p_index = np.exp((alpha * np.log(P_hat)).sum(axis=1))  # Cobb-Douglas CPI
     real_w  = w_hat / p_index
-    return (c_hat, P_hat, pi_hat, X_prime, D_prime, p_index, real_w)
+    sector_links = calc_sector_links(X_prime, pi_prime, tilde_tau_prime, gamma)
+    return (c_hat, P_hat, pi_hat, X_prime, D_prime, p_index, real_w, sector_links)

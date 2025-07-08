@@ -149,15 +149,96 @@ def create_excel_download_button(sol: ModelSol, params: ModelParams, scenario_ke
                     filename = f"all_variables_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
                     label = "📥 Download All Variables (Excel)"
             
-            st.download_button(
-                label=label,
-                data=excel_buffer.getvalue(),
-                file_name=filename,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key=f"download_btn_{unique_key}_{variable_name or 'all'}"
-            )
+            # Create download buttons side by side
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.download_button(
+                    label=label,
+                    data=excel_buffer.getvalue(),
+                    file_name=filename,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key=f"download_btn_excel_{unique_key}_{variable_name or 'all'}"
+                )
+            
+            with col2:
+                # CSV download (only for all variables, not single variable)
+                if variable_name is None:
+                    csv_buffer = create_csv_locally(sol, params, baseline_sol)
+                    
+                    if baseline_sol is not None:
+                        csv_filename = f"percentage_changes_1D_2D_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                        csv_label = "📥 Download 1D & 2D Variables (CSV)"
+                    else:
+                        csv_filename = f"all_variables_1D_2D_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                        csv_label = "📥 Download 1D & 2D Variables (CSV)"
+                    
+                    st.download_button(
+                        label=csv_label,
+                        data=csv_buffer.getvalue(),
+                        file_name=csv_filename,
+                        mime="text/csv",
+                        key=f"download_btn_csv_{unique_key}_{variable_name or 'all'}"
+                    )
     except Exception as e:
         st.error(f"Failed to create download: {e}")
+
+def create_csv_locally(sol: ModelSol, params: ModelParams, baseline_sol: Optional[ModelSol] = None) -> io.BytesIO:
+    """Create CSV file locally for 1D and 2D variables in long format."""
+    csv_buffer = io.StringIO()
+    
+    # Prepare data rows
+    rows = []
+    
+    for attr_name in dir(sol):
+        if not attr_name.startswith('_') and hasattr(sol, attr_name):
+            attr_value = getattr(sol, attr_name)
+            
+            if isinstance(attr_value, np.ndarray):
+                # Calculate percentage change if baseline is provided
+                data_to_use = attr_value
+                if baseline_sol is not None and hasattr(baseline_sol, attr_name):
+                    baseline_value = getattr(baseline_sol, attr_name)
+                    # Calculate percentage change: 100 * (counterfactual - baseline) / baseline
+                    data_to_use = 100 * (attr_value - baseline_value) / (np.abs(baseline_value) + 1e-8)
+                
+                if data_to_use.ndim == 1:
+                    # 1D variable - treat as country-level with Sector = null
+                    for i, country in enumerate(params.country_list):
+                        if i < len(data_to_use):
+                            rows.append({
+                                'Country': country,
+                                'Sector': 'null',
+                                'Variable Name': attr_name,
+                                'Value': data_to_use[i]
+                            })
+                elif data_to_use.ndim == 2:
+                    # 2D variable - country x sector
+                    for i, country in enumerate(params.country_list):
+                        for j, sector in enumerate(params.sector_list):
+                            if i < data_to_use.shape[0] and j < data_to_use.shape[1]:
+                                rows.append({
+                                    'Country': country,
+                                    'Sector': sector,
+                                    'Variable Name': attr_name,
+                                    'Value': data_to_use[i, j]
+                                })
+                # Skip 3D+ variables as requested
+    
+    # Create DataFrame and write to CSV
+    if rows:
+        df = pd.DataFrame(rows)
+        df.to_csv(csv_buffer, index=False)
+    else:
+        # Write header only if no data
+        csv_buffer.write("Country,Sector,Variable Name,Value\n")
+    
+    # Convert to BytesIO for download
+    csv_bytes = io.BytesIO()
+    csv_bytes.write(csv_buffer.getvalue().encode('utf-8'))
+    csv_bytes.seek(0)
+    
+    return csv_bytes
 
 def create_excel_locally(sol: ModelSol, params: ModelParams, variable_name: Optional[str] = None, baseline_sol: Optional[ModelSol] = None) -> io.BytesIO:
     """Create Excel file locally."""
@@ -172,10 +253,29 @@ def create_excel_locally(sol: ModelSol, params: ModelParams, variable_name: Opti
                 df = pd.DataFrame({variable_name: data}, index=params.country_list)  # type: ignore
             elif data.ndim == 2:
                 df = pd.DataFrame(data, index=params.country_list, columns=params.sector_list)  # type: ignore
+            elif data.ndim == 3:
+                # Handle 3D arrays (e.g., trade flows)
+                N, _, S = data.shape
+                rows = []
+                for n in range(N):
+                    for i in range(N):
+                        for s in range(S):
+                            rows.append({
+                                'Importer': params.country_list[n],
+                                'Exporter': params.country_list[i], 
+                                'Sector': params.sector_list[s],
+                                variable_name: data[n, i, s]
+                            })
+                df = pd.DataFrame(rows)
+            elif data.ndim == 4 and variable_name == 'sector_links':
+                # Special handling for sector_links - flatten to 2D
+                from API.visualization import flatten_sector_links_for_viz
+                flattened_data, row_labels, col_labels = flatten_sector_links_for_viz(data, params)
+                df = pd.DataFrame(flattened_data, index=row_labels, columns=col_labels)
             else:
-                # For 3D+ arrays, create a flattened version
+                # For other 4D+ arrays, create a flattened version
                 reshaped_data = data.reshape(data.shape[0], -1)
-                col_names = [f"dim_{i}_{j}" for i in range(data.shape[1]) for j in range(data.shape[2])]
+                col_names = [f"dim_{i}" for i in range(reshaped_data.shape[1])]
                 df = pd.DataFrame(reshaped_data, index=params.country_list, columns=col_names)  # type: ignore
             
             df.to_excel(excel_buffer, sheet_name=variable_name, engine='openpyxl')  # type: ignore
@@ -199,8 +299,27 @@ def create_excel_locally(sol: ModelSol, params: ModelParams, variable_name: Opti
                                 df = pd.DataFrame({attr_name: data_to_use}, index=params.country_list)  # type: ignore
                             elif data_to_use.ndim == 2:
                                 df = pd.DataFrame(data_to_use, index=params.country_list, columns=params.sector_list)  # type: ignore
+                            elif data_to_use.ndim == 3:
+                                # Handle 3D arrays (e.g., trade flows)
+                                N, _, S = data_to_use.shape
+                                rows = []
+                                for n in range(N):
+                                    for i in range(N):
+                                        for s in range(S):
+                                            rows.append({
+                                                'Importer': params.country_list[n],
+                                                'Exporter': params.country_list[i], 
+                                                'Sector': params.sector_list[s],
+                                                attr_name: data_to_use[n, i, s]
+                                            })
+                                df = pd.DataFrame(rows)
+                            elif data_to_use.ndim == 4 and attr_name == 'sector_links':
+                                # Special handling for sector_links - flatten to 2D
+                                from API.visualization import flatten_sector_links_for_viz
+                                flattened_data, row_labels, col_labels = flatten_sector_links_for_viz(data_to_use, params)
+                                df = pd.DataFrame(flattened_data, index=row_labels, columns=col_labels)
                             else:
-                                continue  # Skip 3D+ for now
+                                continue  # Skip other 4D+ variables
                             
                             sheet_name = attr_name[:31] if len(attr_name) > 31 else attr_name
                             df.to_excel(writer, sheet_name=sheet_name)
@@ -467,6 +586,14 @@ def create_counterfactual_ui(suffix: str = "", description: str = "Counterfactua
 
 def show_variable_download_section(sol: ModelSol, params: ModelParams, scenario_key: Optional[str] = None, unique_key: str = "", baseline_sol: Optional[ModelSol] = None):
     """Show variable download options."""
+    st.markdown("### Download Options")
+    if baseline_sol is not None:
+        st.info("📊 **Excel**: All variables in separate sheets (includes 3D/4D variables)")
+        st.info("📋 **CSV**: 1D & 2D variables in long format (Country, Sector, Variable Name, Value)")
+    else:
+        st.info("📊 **Excel**: All variables in separate sheets (includes sector_links and trade flows)")  
+        st.info("📋 **CSV**: 1D & 2D variables in standardized long format for easy analysis")
+    
     create_excel_download_button(sol, params, scenario_key, None, unique_key, baseline_sol)
 
 def main():
@@ -483,6 +610,14 @@ def main():
         try:
             st.cache_data.clear()
             st.cache_resource.clear()
+            # Also clear session state caches
+            if 'baseline_solution' in st.session_state:
+                st.session_state['baseline_solution'] = None
+                st.session_state['baseline_params'] = None
+            if 'cf_solution' in st.session_state:
+                st.session_state['cf_solution'] = None
+                st.session_state['cf_params'] = None
+                st.session_state['cf_scenario_key'] = None
             st.sidebar.success("✅ Caches cleared! Models will be re-solved.")
             # Use rerun for Streamlit 1.18+
             if hasattr(st, 'rerun'):
@@ -506,6 +641,20 @@ def main():
         st.session_state['cf_solution'] = None
         st.session_state['cf_params'] = None
         st.session_state['cf_scenario_key'] = None
+    
+    # Initialize session state for baseline solution (to avoid re-solving)
+    if 'baseline_solution' not in st.session_state:
+        st.session_state['baseline_solution'] = None
+        st.session_state['baseline_params'] = None
+    
+    # Ensure baseline model is solved and cached in session state
+    if st.session_state['baseline_solution'] is None:
+        baseline_sol, baseline_params = solve_benchmark_unified()
+        st.session_state['baseline_solution'] = baseline_sol
+        st.session_state['baseline_params'] = baseline_params
+    else:
+        baseline_sol = st.session_state['baseline_solution']
+        baseline_params = st.session_state['baseline_params']
     
     # Initialize visualization engine
     country_names, sector_names = get_country_sector_names()
@@ -532,8 +681,7 @@ def main():
         st.header("🏛️ Baseline Model Analysis")
         st.info("Using real-world tariff data from the dataset")
         
-        # Always solve baseline model (already cached)
-        baseline_sol, baseline_params = solve_benchmark_unified()
+        # Use cached baseline model from session state
         baseline_scenario_key = "benchmark"
         
         if baseline_sol is not None and baseline_params is not None:
@@ -619,8 +767,7 @@ def main():
                 viz_engine.visualize_single_model(cf_sol)
                 
             else:  # Percentage Change from Baseline
-                # Get baseline model for comparison
-                baseline_sol, baseline_params = solve_benchmark_unified()
+                # Use cached baseline model from session state (no need to re-solve)
                 if baseline_sol is not None:
                     st.subheader("📥 Download Percentage Changes (Baseline → Counterfactual)")
                     show_variable_download_section(cf_sol, cf_params, cf_scenario_key, "counterfactual_changes", baseline_sol)

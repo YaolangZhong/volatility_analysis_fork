@@ -1,0 +1,278 @@
+<mxfile host="Electron" agent="5.0" version="24.7.17">
+  <diagram name="Model Solution Flow" id="model-solution-flow">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Title -->
+        <mxCell id="title" value="Economic Model Solution Framework" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#2F5233;" vertex="1" parent="1">
+          <mxGeometry x="527" y="40" width="600" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 1: Data Input -->
+        <mxCell id="phase1_title" value="Phase 1: Data Input &amp; Validation" style="text;html=1;strokeColor=none;fillColor=#d4e1f5;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="120" width="200" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Data Sources -->
+        <mxCell id="data_npz" value="data_2017.npz&#xa;• Countries (N=49)&#xa;• Sectors (S=26)&#xa;• Parameters (α,β,γ,θ,τ)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="50" y="180" width="150" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="io_data" value="Input-Output Tables&#xa;• Trade flows&#xa;• Production data&#xa;• Tariff schedules" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="220" y="180" width="150" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ModelParams -->
+        <mxCell id="model_params" value="ModelParams&#xa;• Validate dimensions&#xa;• Check consistency&#xa;• Apply calibration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="135" y="300" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 2: Model Initialization -->
+        <mxCell id="phase2_title" value="Phase 2: Model Initialization" style="text;html=1;strokeColor=none;fillColor=#d4e1f5;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="120" width="200" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Model Creation -->
+        <mxCell id="model_class" value="Model(params)&#xa;• Initialize solution container&#xa;• Set up equation system&#xa;• Prepare solver state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="450" y="180" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Initial Conditions -->
+        <mxCell id="initial_guess" value="Initial Conditions&#xa;• w = [1, 1, ..., 1]&#xa;• Pm_hat_old = ones(N,S)&#xa;• Set tolerance = 1e-8" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="680" y="180" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ModelSolver -->
+        <mxCell id="model_solver" value="ModelSolver&#xa;• Configure convergence&#xa;• Set max iterations&#xa;• Initialize monitors" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="565" y="300" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 3: Iterative Solution -->
+        <mxCell id="phase3_title" value="Phase 3: Iterative Solution Process" style="text;html=1;strokeColor=none;fillColor=#d4e1f5;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="900" y="120" width="250" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Iteration Loop Start -->
+        <mxCell id="iteration_start" value="Start Iteration&#xa;iter = 1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="950" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Generate Equilibrium -->
+        <mxCell id="generate_eq" value="generate_equilibrium()&#xa;• Calculate trade shares π&#xa;• Update price indices P&#xa;• Compute expenditures X&#xa;• Calculate new wages w'" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="180" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Mathematical Core -->
+        <mxCell id="math_core" value="Mathematical Core&#xa;&#xa;π[n,i,s] = (τ*c)^(-θ) / Σ(τ*c)^(-θ)&#xa;P[n,s] = [Σ(τ*c)^(-θ)]^(-1/θ)&#xa;c[i,s] = w^β * Π(P^γ)&#xa;X[i,s] = Σπ*(D + ΣγX)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="160" width="250" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- Convergence Check -->
+        <mxCell id="convergence" value="Convergence Check&#xa;max|w' - w| &lt; tolerance?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="950" y="340" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Update Variables -->
+        <mxCell id="update_vars" value="Update Variables&#xa;w = w'&#xa;Pm_hat_old = Pm_hat&#xa;iter = iter + 1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="750" y="340" width="150" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Max Iterations Check -->
+        <mxCell id="max_iter" value="iter &lt; max_iter?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="755" y="470" width="140" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 4: Post-Processing -->
+        <mxCell id="phase4_title" value="Phase 4: Post-Processing &amp; Results" style="text;html=1;strokeColor=none;fillColor=#d4e1f5;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="580" width="250" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Calculate Extended Variables -->
+        <mxCell id="extended_vars" value="Calculate Extended Variables&#xa;• sector_links (4D matrix)&#xa;• Trade flow matrices&#xa;• Welfare indicators&#xa;• Price changes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="250" y="640" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ModelSol Container -->
+        <mxCell id="model_sol" value="ModelSol Container&#xa;• Store all 19+ variables&#xa;• Organize by type&#xa;• Validate results&#xa;• Provide metadata" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="500" y="640" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Output Categories -->
+        <mxCell id="output_categories" value="Output Categories&#xa;&#xa;• Price Variables (Pf_hat, Pm_hat, c_hat)&#xa;• Quantity Variables (X_prime, output_prime)&#xa;• Trade Variables (pif_prime, pim_prime)&#xa;• Welfare Variables (real_w_hat, real_I_prime)&#xa;• Linkage Variables (sector_links)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="750" y="620" width="280" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- Applications -->
+        <mxCell id="applications" value="Applications&#xa;&#xa;• Policy Analysis&#xa;• Trade War Simulation&#xa;• Supply Chain Assessment&#xa;• Economic Forecasting&#xa;• Academic Research" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="640" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Error Handling -->
+        <mxCell id="error_handling" value="Error Handling&#xa;&#xa;• Convergence failure&#xa;• Invalid parameters&#xa;• Numerical instability&#xa;• Memory constraints" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="50" y="470" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Validation Checks -->
+        <mxCell id="validation" value="Validation Checks&#xa;&#xa;• Market clearing conditions&#xa;• Trade balance equations&#xa;• Non-negativity constraints&#xa;• Economic plausibility" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="440" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows - Phase 1 -->
+        <mxCell id="arrow1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="data_npz" target="model_params" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="io_data" target="model_params" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 1 to Phase 2 -->
+        <mxCell id="arrow3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="model_params" target="model_class" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 2 internal -->
+        <mxCell id="arrow4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="model_class" target="model_solver" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="initial_guess" target="model_solver" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 2 to Phase 3 -->
+        <mxCell id="arrow6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="model_solver" target="iteration_start" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Iteration loop -->
+        <mxCell id="arrow7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="iteration_start" target="generate_eq" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="generate_eq" target="math_core" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="generate_eq" target="convergence" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1220" y="300" />
+              <mxPoint x="1030" y="300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Convergence No -->
+        <mxCell id="arrow10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#FF6600;" source="convergence" target="update_vars" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label_no" value="No" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#FF6600;" vertex="1" parent="1">
+          <mxGeometry x="870" y="360" width="30" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#FF6600;" source="update_vars" target="max_iter" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Max iterations Yes - continue loop -->
+        <mxCell id="arrow12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#FF6600;" source="max_iter" target="generate_eq" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="825" y="550" />
+              <mxPoint x="1450" y="550" />
+              <mxPoint x="1450" y="140" />
+              <mxPoint x="1220" y="140" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label_yes1" value="Yes" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#FF6600;" vertex="1" parent="1">
+          <mxGeometry x="850" y="520" width="30" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Convergence Yes or Max iterations No - go to results -->
+        <mxCell id="arrow13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#00CC66;" source="convergence" target="extended_vars" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1030" y="600" />
+              <mxPoint x="350" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label_yes2" value="Yes" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#00CC66;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="580" width="30" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#FF0000;" source="max_iter" target="extended_vars" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="500" />
+              <mxPoint x="350" y="500" />
+              <mxPoint x="350" y="620" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="label_no2" value="No" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#FF0000;" vertex="1" parent="1">
+          <mxGeometry x="690" y="480" width="30" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 4 internal -->
+        <mxCell id="arrow15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#00CC66;" source="extended_vars" target="model_sol" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#00CC66;" source="model_sol" target="output_categories" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#00CC66;" source="output_categories" target="applications" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Validation connections -->
+        <mxCell id="arrow18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;strokeColor=#666666;dashed=1;" source="math_core" target="validation" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Error handling connections -->
+        <mxCell id="arrow19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;strokeColor=#666666;dashed=1;" source="model_params" target="error_handling" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="180" y="410" />
+              <mxPoint x="140" y="410" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend_title" value="Legend" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="800" width="60" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend_main" value="Main Process Flow" style="text;html=1;strokeColor=#0066CC;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="840" width="130" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend_iteration" value="Iteration Loop" style="text;html=1;strokeColor=#FF6600;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="870" width="130" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend_success" value="Successful Completion" style="text;html=1;strokeColor=#00CC66;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="900" width="150" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend_validation" value="Validation/Error Handling" style="text;html=1;strokeColor=#666666;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="930" width="170" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Performance metrics -->
+        <mxCell id="performance" value="Performance Characteristics&#xa;&#xa;• Typical convergence: 10-50 iterations&#xa;• Complexity: O(N²S) per iteration&#xa;• Memory: O(N²S) for trade matrices&#xa;• Default tolerance: 1e-8&#xa;• Max iterations: 1000" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="640" width="250" height="120" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile> 

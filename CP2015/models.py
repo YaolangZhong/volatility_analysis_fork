@@ -305,6 +305,8 @@ class ModelSol(NpzMixin):
         Goods import expenditure changes in each sector in each country
     X_prime : (N, S) array (country, sector)
         Goods expenditure in sector s in country i
+    sector_links : (N, S, N, S) array (country, output_sector, exporter_country, exporter_sector)
+        Import linkages: country n's imports for output sector k from country i sector j
 
     """
     w_hat:     np.ndarray  # shape (N,)
@@ -315,6 +317,7 @@ class ModelSol(NpzMixin):
     p_index:   np.ndarray  # shape (N,)
     real_w:    np.ndarray  # shape (N,)
     D_prime:  np.ndarray  # shape (N,)
+    sector_links: np.ndarray  # shape (N, S, N, S)
     
 
     # ------------------------------------------------------------------
@@ -362,6 +365,7 @@ class Model:
             p_index  = np.ones(N),
             real_w   = np.ones(N),
             D_prime = np.ones(N),
+            sector_links = np.ones((N, S, N, S)),
         )
 
     @classmethod

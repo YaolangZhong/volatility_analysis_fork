@@ -35,7 +35,7 @@ class ModelSolver:
         wfmax = 1.0
         iteration = 1
         while iteration <= max_iter and wfmax > tol:
-            (c_hat, P_hat, pi_hat, X_prime, D_prime, p_index, real_w) = generate_equilibrium(
+            (c_hat, P_hat, pi_hat, X_prime, D_prime, p_index, real_w, sector_links) = generate_equilibrium(
                 w_hat, P_hat_old, alpha, beta, gamma, theta, pi, tilde_tau, V, D, X, lambda_hat, d_hat, tilde_tau_hat)
             w_grad = (D - D_prime) / V * vfactor
             X = X_prime        # latest expenditure becomes next-round initial guess
@@ -65,6 +65,7 @@ class ModelSolver:
             X_prime = X_prime,
             p_index = p_index,
             real_w  = real_w,
-            D_prime = D_prime
+            D_prime = D_prime,
+            sector_links = sector_links
         )
         self.model.is_optimized = True

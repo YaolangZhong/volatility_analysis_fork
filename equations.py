@@ -215,6 +215,57 @@ def calc_D_prime(
 def calc_production(X, pi):
     return np.sum(X[:, np.newaxis, :] * pi, axis=0)
 
+def calc_sector_links(
+    X: np.ndarray,          # shape (N, S), total expenditure by country and sector
+    pi: np.ndarray,         # shape (N, N, S), trade shares (importer, exporter, sector)
+    tilde_tau: np.ndarray,  # shape (N, N, S), tariff factors (importer, exporter, sector)
+    gamma: np.ndarray       # shape (N, S, S), IO coefficients (country, using_sector, input_sector)
+) -> np.ndarray:
+    """
+    Calculate sector links representing import linkages between countries and sectors.
+    
+    The construction follows:
+    1. Calculate imports: X[n,j] * pi[n,i,j] / (1+tau[n,i,j])  
+    2. Expand to 4D with gamma coefficients: imports * gamma[n,j,k]
+    3. Reshape from (n,i,j,k) to (n,k,i,j) for interpretation as 
+       "country n's imports for output sector k from country i sector j"
+    
+    Parameters
+    ----------
+    X : np.ndarray, shape (N, S)
+        Total expenditure by importer country and sector
+    pi : np.ndarray, shape (N, N, S)
+        Trade shares (importer, exporter, sector)
+    tilde_tau : np.ndarray, shape (N, N, S)
+        Tariff factors (importer, exporter, sector)
+    gamma : np.ndarray, shape (N, S, S)
+        IO coefficients (country, using_sector, input_sector)
+    
+    Returns
+    -------
+    sector_links : np.ndarray, shape (N, S, N, S)
+        Import linkages (importer_country, output_sector, exporter_country, input_sector)
+    """
+    N, S = X.shape
+    
+    # Step 1: Calculate imports for each (n,i,j) 
+    # imports[n,i,j] = X[n,j] * pi[n,i,j] / tilde_tau[n,i,j]
+    imports = X[:, np.newaxis, :] * pi / tilde_tau  # shape (N, N, S)
+    
+    # Step 2: Expand using gamma coefficients
+    # For each country n and output sector k, calculate how much is imported
+    # from each (i,j) weighted by gamma[n,k,j]
+    sector_links = np.zeros((N, S, N, S))
+    
+    for n in range(N):
+        for k in range(S):  # output sector
+            for i in range(N):  # exporter country
+                for j in range(S):  # input sector
+                    # Country n's imports for output sector k from country i sector j
+                    sector_links[n, k, i, j] = imports[n, i, j] * gamma[n, k, j]
+    
+    return sector_links
+
 
 # @njit
 def generate_equilibrium(
@@ -238,7 +289,7 @@ def generate_equilibrium(
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, 
            np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
            np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, 
-           np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+           np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     kf_hat = lambda_hat**(-1/theta) * (df_hat * tilde_tau_hat)
     km_hat = lambda_hat**(-1/theta) * (dm_hat * tilde_tau_hat)
     c_hat, Pf_hat, Pm_hat = solve_price_and_cost(w_hat, Pm_hat, beta, gamma, theta, pif, pim, kf_hat, km_hat)
@@ -246,6 +297,7 @@ def generate_equilibrium(
     pim_hat   = calc_pi_hat(c_hat, Pm_hat, theta, lambda_hat, dm_hat)
     pif_prime = pif * pif_hat
     pim_prime = pim * pim_hat
+    pi_prime = (pif_prime + pim_prime) / 2  # Combined trade shares for sector_links calculation
     tilde_tau_prime = tilde_tau * tilde_tau_hat
     Xf_prime, Xm_prime, I_prime, output_prime = calc_X_prime(alpha, gamma, pif_prime, pim_prime, tilde_tau_prime , w_hat, V, Xf, Xm, D)
     EX = np.einsum('inj,inj,ij->n', pif_prime, 1 / tilde_tau_prime, Xf_prime) + \
@@ -261,5 +313,6 @@ def generate_equilibrium(
     Xf_prod_prime = calc_production(Xf_prime, pif)
     Xm_prod_prime = calc_production(Xm_prime, pim)
     X_prod_prime = Xf_prod_prime + Xm_prod_prime
+    sector_links = calc_sector_links(X_prime, pi_prime, tilde_tau_prime, gamma)
 
-    return (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, pif_prime, pim_prime, Xf_prime, Xm_prime, D_prime, p_index, real_w_hat, X_prime, Xf_prod_prime, Xm_prod_prime, X_prod_prime, I_prime, output_prime, real_I_prime)
+    return (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, pif_prime, pim_prime, Xf_prime, Xm_prime, D_prime, p_index, real_w_hat, X_prime, Xf_prod_prime, Xm_prod_prime, X_prod_prime, I_prime, output_prime, real_I_prime, sector_links)

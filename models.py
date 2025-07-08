@@ -69,6 +69,7 @@ MODEL_VARIABLES = {
     'I_prime': VarInfo('I_prime', '(N,)', 'New income in country n', 'I_prime[country]', 'sol'),
     'output_prime': VarInfo('output_prime', '(N, S)', 'New output demand in sector s in country n', 'output_prime[country, sector]', 'sol'),
     'real_I_prime': VarInfo('real_I_prime', '(N,)', 'New real income in country n', 'real_I_prime[country]', 'sol'),
+    'sector_links': VarInfo('sector_links', '(N, S, N, S)', 'Import linkages between countries and sectors', 'sector_links[importer_country, output_sector, exporter_country, input_sector]', 'sol'),
 }
 
 class ModelRegistry:
@@ -555,6 +556,7 @@ class ModelSol(NpzMixin):
     I_prime: np.ndarray  # shape (N,)
     output_prime: np.ndarray  # shape (N, S)
     real_I_prime: np.ndarray  # shape (N,)
+    sector_links: np.ndarray  # shape (N, S, N, S)
     
 
     # ------------------------------------------------------------------
@@ -635,6 +637,7 @@ class Model:
             I_prime = np.ones(N),
             output_prime = np.ones((N,S)),
             real_I_prime = np.ones(N),
+            sector_links = np.ones((N, S, N, S)),
         )
     
     def summary(self) -> str:

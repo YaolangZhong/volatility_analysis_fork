@@ -17,6 +17,8 @@ import plotly.graph_objects as go
 import streamlit as st
 from typing import Dict, List, Optional, Union, Tuple
 from models import ModelSol, ModelParams
+import pandas as pd
+from io import BytesIO
 
 
 class VisualizationDataProcessor:
@@ -305,12 +307,28 @@ class ModelVisualizationEngine:
             self._visualize_2d_variable(value, variable_name, is_percentage_change)
         elif isinstance(value, np.ndarray) and value.ndim == 3:
             self._visualize_3d_variable(value, variable_name, is_percentage_change)
+        elif isinstance(value, np.ndarray) and value.ndim == 4:
+            # sector_links should not be visualized, only available for download
+            if variable_name == 'sector_links':
+                st.info("🔗 **Sector Links** is available for Excel download but not for interactive visualization.")
+                st.markdown("**To access sector_links data:**")
+                st.markdown("- Use the Excel download button to get the flattened country-sector matrix")
+                st.markdown("- Rows and columns represent country-sector combinations") 
+                st.markdown("- Values show import linkages between country-sector pairs")
+            else:
+                # Generic 4D handling - show basic statistics
+                st.write(f"4D Variable: {variable_name}")
+                st.write(f"Shape: {value.shape}")
+                st.write(f"Min: {np.min(value):.6f}, Max: {np.max(value):.6f}, Mean: {np.mean(value):.6f}")
+                st.info("This 4D variable requires specialized visualization not yet implemented.")
         elif isinstance(value, np.ndarray) and value.ndim == 0:
             st.write(f"Value: **{value.item():.4f}**")
         else:
             st.write("Value:")
             st.write(value)
     
+
+
     def _visualize_1d_variable(self, value: np.ndarray, variable_name: str, is_percentage_change: bool = False):
         """Handle 1D variable visualization with UI controls."""
         if value.shape[0] == len(self.data_processor.country_names):
@@ -326,9 +344,9 @@ class ModelVisualizationEngine:
 
         selected_items = self.ui.create_multiselect_with_buttons(
             label, names, default_list, 
-            f"{key_prefix}_multiselect",
-            f"select_all_{key_prefix}",
-            f"remove_all_{key_prefix}"
+            f"{key_prefix}_multiselect_{variable_name}",
+            f"select_all_{key_prefix}_{variable_name}",
+            f"remove_all_{key_prefix}_{variable_name}"
         )
 
         fig_width, fig_height = self.ui.create_figure_size_controls()
@@ -344,12 +362,12 @@ class ModelVisualizationEngine:
         """Handle 2D variable visualization with UI controls."""
         selected_countries = self.ui.create_multiselect_with_buttons(
             "Countries", self.data_processor.country_names_sorted, [],
-            "country_multiselect", "select_all_countries", "remove_all_countries"
+            f"country_multiselect_{variable_name}", f"select_all_countries_{variable_name}", f"remove_all_countries_{variable_name}"
         )
         
         selected_sectors = self.ui.create_multiselect_with_buttons(
             "Sectors", self.data_processor.sector_names, self.data_processor.sector_names,
-            "sector_multiselect", "select_all_sectors", "remove_all_sectors"
+            f"sector_multiselect_{variable_name}", f"select_all_sectors_{variable_name}", f"remove_all_sectors_{variable_name}"
         )
         
         if selected_countries and selected_sectors:
@@ -364,17 +382,17 @@ class ModelVisualizationEngine:
         """Handle 3D variable visualization with UI controls."""
         selected_importers = self.ui.create_multiselect_with_buttons(
             "Importer Countries", self.data_processor.country_names_sorted, [],
-            "importer_multiselect", "select_all_importers", "remove_all_importers"
+            f"importer_multiselect_{variable_name}", f"select_all_importers_{variable_name}", f"remove_all_importers_{variable_name}"
         )
         
         selected_exporters = self.ui.create_multiselect_with_buttons(
             "Exporter Countries", self.data_processor.country_names_sorted, [],
-            "exporter_multiselect", "select_all_exporters", "remove_all_exporters"
+            f"exporter_multiselect_{variable_name}", f"select_all_exporters_{variable_name}", f"remove_all_exporters_{variable_name}"
         )
         
         selected_sectors = self.ui.create_multiselect_with_buttons(
             "Sectors", self.data_processor.sector_names, self.data_processor.sector_names,
-            "sector_multiselect_3d", "select_all_sectors_3d", "remove_all_sectors_3d"
+            f"sector_multiselect_3d_{variable_name}", f"select_all_sectors_3d_{variable_name}", f"remove_all_sectors_3d_{variable_name}"
         )
         
         if selected_importers and selected_exporters and selected_sectors:
@@ -384,4 +402,154 @@ class ModelVisualizationEngine:
                 selected_sectors, fig_width, fig_height, is_percentage_change
             )
         else:
-            st.info("No importers, exporters, or sectors selected for 3D variable.") 
+            st.info("No importers, exporters, or sectors selected for 3D variable.")
+
+
+def create_excel_download_button(sol: ModelSol, params: ModelParams, scenario_key: Optional[str] = None, 
+                                variable_name: Optional[str] = None, unique_key: str = "", 
+                                baseline_sol: Optional[ModelSol] = None):
+    """Create Excel download button for model solution data."""
+    
+    def generate_excel_data():
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            if variable_name:
+                # Download specific variable
+                data = getattr(sol, variable_name)
+                if variable_name == 'sector_links':
+                    # Flatten sector_links for visualization
+                    flattened_data, row_labels, col_labels = flatten_sector_links_for_viz(data, params)
+                    df = pd.DataFrame(flattened_data, index=row_labels, columns=col_labels)
+                    df.to_excel(writer, sheet_name=variable_name)
+                elif len(data.shape) == 1:
+                    # 1D array - country-level data
+                    df = pd.DataFrame({
+                        'Country': list(params.country_list),
+                        variable_name: data
+                    })
+                    df.to_excel(writer, sheet_name=variable_name, index=False)
+                elif len(data.shape) == 2:
+                    # 2D array - country x sector data
+                    df = pd.DataFrame(
+                        data, 
+                        index=list(params.country_list),
+                        columns=list(params.sector_list)
+                    )
+                    df.to_excel(writer, sheet_name=variable_name)
+                elif len(data.shape) == 3:
+                    # 3D array - handle trade data specially
+                    N, _, S = data.shape
+                    rows = []
+                    for n in range(N):
+                        for i in range(N):
+                            for s in range(S):
+                                rows.append({
+                                    'Importer': params.country_list[n],
+                                    'Exporter': params.country_list[i], 
+                                    'Sector': params.sector_list[s],
+                                    variable_name: data[n, i, s]
+                                })
+                    df = pd.DataFrame(rows)
+                    df.to_excel(writer, sheet_name=variable_name, index=False)
+            else:
+                # Download all variables
+                for var_name in dir(sol):
+                    if not var_name.startswith('_') and hasattr(sol, var_name):
+                        data = getattr(sol, var_name)
+                        if isinstance(data, np.ndarray):
+                            try:
+                                if var_name == 'sector_links':
+                                    # Flatten sector_links for visualization
+                                    flattened_data, row_labels, col_labels = flatten_sector_links_for_viz(data, params)
+                                    df = pd.DataFrame(flattened_data, index=row_labels, columns=col_labels)
+                                    df.to_excel(writer, sheet_name=var_name)
+                                elif len(data.shape) == 1:
+                                    df = pd.DataFrame({
+                                        'Country': list(params.country_list),
+                                        var_name: data
+                                    })
+                                    df.to_excel(writer, sheet_name=var_name, index=False)
+                                elif len(data.shape) == 2:
+                                    df = pd.DataFrame(
+                                        data, 
+                                        index=list(params.country_list),
+                                        columns=list(params.sector_list)
+                                    )
+                                    df.to_excel(writer, sheet_name=var_name)
+                                elif len(data.shape) == 3:
+                                    N, _, S = data.shape
+                                    rows = []
+                                    for n in range(N):
+                                        for i in range(N):
+                                            for s in range(S):
+                                                rows.append({
+                                                    'Importer': params.country_list[n],
+                                                    'Exporter': params.country_list[i], 
+                                                    'Sector': params.sector_list[s],
+                                                    var_name: data[n, i, s]
+                                                })
+                                    df = pd.DataFrame(rows)
+                                    df.to_excel(writer, sheet_name=var_name, index=False)
+                            except Exception as e:
+                                st.warning(f"Could not export {var_name}: {e}")
+        
+        output.seek(0)
+        return output.getvalue()
+    
+    if variable_name:
+        filename = f"{scenario_key}_{variable_name}.xlsx" if scenario_key else f"{variable_name}.xlsx"
+        button_text = f"📊 Download {variable_name} as Excel"
+    else:
+        filename = f"{scenario_key}_all_variables.xlsx" if scenario_key else "all_variables.xlsx"
+        button_text = "📊 Download All Variables as Excel"
+    
+    st.download_button(
+        label=button_text,
+        data=generate_excel_data(),
+        file_name=filename,
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        key=f"excel_download_{unique_key}_{variable_name or 'all'}"
+    )
+
+
+def flatten_sector_links_for_viz(sector_links: np.ndarray, params: ModelParams) -> Tuple[np.ndarray, List[str], List[str]]:
+    """
+    Flatten sector_links from 4D (N, S, N, S) to 2D (NS, NS) for visualization.
+    
+    Args:
+        sector_links: 4D array with shape (importer_country, output_sector, exporter_country, input_sector)
+        params: Model parameters containing country and sector lists
+        
+    Returns:
+        Tuple of (flattened_2d_array, row_labels, col_labels)
+    """
+    N, S, _, _ = sector_links.shape
+    NS = N * S
+    
+    # Create labels using actual country and sector names from params
+    row_labels = []  # Importer country-output sector combinations
+    col_labels = []  # Exporter country-input sector combinations
+    
+    # Row labels: importer_country + output_sector 
+    for n in range(N):
+        for s in range(S):
+            country_name = params.country_list[n] if n < len(params.country_list) else f"Country_{n}"
+            sector_name = params.sector_list[s] if s < len(params.sector_list) else f"Sector_{s}"
+            row_labels.append(f"{country_name}_{sector_name}")
+    
+    # Column labels: exporter_country + input_sector
+    for i in range(N): 
+        for j in range(S):
+            country_name = params.country_list[i] if i < len(params.country_list) else f"Country_{i}"
+            sector_name = params.sector_list[j] if j < len(params.sector_list) else f"Sector_{j}"
+            col_labels.append(f"{country_name}_{sector_name}")
+    
+    # Reshape 4D (N, S, N, S) to 2D (NS, NS)
+    flattened = sector_links.reshape(NS, NS)
+    
+    return flattened, row_labels, col_labels
+
+
+def create_comparison_plots_section(baseline_sol: ModelSol, cf_sol: ModelSol, params: ModelParams):
+    # ... existing code ...
+    pass 
