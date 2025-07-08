@@ -1,0 +1,254 @@
+<mxfile host="Electron" agent="5.0" version="24.7.17">
+  <diagram name="Visualization Framework Flow" id="visualization-framework-flow">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Title -->
+        <mxCell id="title" value="Streamlit Visualization Framework Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#2F5233;" vertex="1" parent="1">
+          <mxGeometry x="527" y="40" width="600" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 1: App Startup -->
+        <mxCell id="phase1_title" value="Phase 1: App Startup &amp; Initialization" style="text;html=1;strokeColor=none;fillColor=#ffcccc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="120" width="250" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Streamlit Config -->
+        <mxCell id="streamlit_config" value="Streamlit Configuration&#xa;st.set_page_config(layout='wide')&#xa;• Page layout setup&#xa;• Initial UI configuration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="50" y="180" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Module Imports -->
+        <mxCell id="module_imports" value="Module Imports&#xa;• model_pipeline&#xa;• visualization&#xa;• API client setup&#xa;• Dependency checking" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="250" y="180" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Session State Init -->
+        <mxCell id="session_init" value="Session State Initialization&#xa;• baseline_solution = None&#xa;• baseline_params = None&#xa;• cf_solution = None&#xa;• UI state variables" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="135" y="300" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 2: Performance Bottleneck -->
+        <mxCell id="phase2_title" value="Phase 2: Model Loading (PERFORMANCE BOTTLENECK)" style="text;html=1;strokeColor=none;fillColor=#ff9999;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="500" y="120" width="350" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Baseline Check -->
+        <mxCell id="baseline_check" value="Baseline Solution Check&#xa;if st.session_state['baseline_solution'] is None:&#xa;• First app load detection&#xa;• Cache miss scenario" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="450" y="180" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Model Solving -->
+        <mxCell id="model_solving" value="🚨 BLOCKING MODEL SOLVING 🚨&#xa;solve_benchmark_unified()&#xa;• 10-30 second delay&#xa;• User sees 'Running' indicator&#xa;• No UI interaction possible" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff6666;strokeColor=#b85450;fontColor=#ffffff;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="180" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Cache Storage -->
+        <mxCell id="cache_storage" value="Solution Storage&#xa;• Session state caching&#xa;• Memory allocation&#xa;• NumPy array storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="575" y="320" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 3: UI Rendering -->
+        <mxCell id="phase3_title" value="Phase 3: UI Rendering &amp; Visualization Engine" style="text;html=1;strokeColor=none;fillColor=#d4e1f5;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="950" y="120" width="300" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Visualization Engine -->
+        <mxCell id="viz_engine" value="Visualization Engine Init&#xa;ModelVisualizationEngine()&#xa;• Country/sector metadata&#xa;• UI component setup&#xa;• Chart rendering prep" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="950" y="180" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- UI Components -->
+        <mxCell id="ui_components" value="UI Component Rendering&#xa;• Model type selection&#xa;• Sidebar controls&#xa;• Download sections&#xa;• Variable selectors" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="180" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 4: User Interaction -->
+        <mxCell id="phase4_title" value="Phase 4: User Interaction Flow" style="text;html=1;strokeColor=none;fillColor=#e1d5e7;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="450" width="250" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Variable Selection -->
+        <mxCell id="variable_selection" value="Variable Selection&#xa;st.selectbox('Choose variable')&#xa;• Fast session state lookup&#xa;• No model re-solving&#xa;• Cached data retrieval" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="50" y="510" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Visualization Rendering -->
+        <mxCell id="viz_rendering" value="Visualization Rendering&#xa;• Plotly chart generation&#xa;• Multi-dimensional data handling&#xa;• Interactive controls&#xa;• Figure size adjustment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="280" y="510" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Counterfactual Flow -->
+        <mxCell id="cf_flow" value="Counterfactual Analysis&#xa;• Configuration UI&#xa;• Scenario solving&#xa;• Results comparison&#xa;• Percentage calculations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="510" y="510" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 5: Caching Architecture -->
+        <mxCell id="phase5_title" value="Phase 5: Multi-Level Caching Architecture" style="text;html=1;strokeColor=none;fillColor=#fff2cc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="450" width="300" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Cache Level 1 -->
+        <mxCell id="cache_l1" value="Level 1: Function Cache&#xa;@st.cache_data&#xa;• solve_benchmark_cached()&#xa;• get_metadata_cached()&#xa;• Cross-session persistence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="750" y="510" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Cache Level 2 -->
+        <mxCell id="cache_l2" value="Level 2: Resource Cache&#xa;@st.cache_resource&#xa;• ModelPipeline instance&#xa;• Singleton pattern&#xa;• App restart survival" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="980" y="510" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Cache Level 3 -->
+        <mxCell id="cache_l3" value="Level 3: Session State&#xa;st.session_state&#xa;• User-specific data&#xa;• Within-session persistence&#xa;• Fast access" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="510" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Performance Issues -->
+        <mxCell id="perf_issues_title" value="Performance Issues &amp; Solutions" style="text;html=1;strokeColor=none;fillColor=#ffcccc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="680" width="250" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Issue 1 -->
+        <mxCell id="issue1" value="❌ STARTUP LAG&#xa;Problem: Immediate model solving&#xa;Impact: 10-30s delay&#xa;Solution: Lazy loading&#xa;Status: NEEDS FIX" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcccc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="50" y="740" width="150" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Issue 2 -->
+        <mxCell id="issue2" value="✅ VARIABLE LAG&#xa;Problem: Re-solving on selection&#xa;Impact: 5-10s delay&#xa;Solution: Session state cache&#xa;Status: FIXED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="220" y="740" width="150" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Issue 3 -->
+        <mxCell id="issue3" value="⚠️ MEMORY USAGE&#xa;Problem: Multiple cache layers&#xa;Impact: 200-500MB RAM&#xa;Solution: Cache management&#xa;Status: MONITORING" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="390" y="740" width="150" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Issue 4 -->
+        <mxCell id="issue4" value="⚠️ VISUALIZATION&#xa;Problem: Large dataset rendering&#xa;Impact: 2-5s chart load&#xa;Solution: Virtualization&#xa;Status: FUTURE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="560" y="740" width="150" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Optimization Recommendations -->
+        <mxCell id="opt_title" value="Optimization Recommendations" style="text;html=1;strokeColor=none;fillColor=#d5e8d4;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="680" width="250" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Lazy Loading -->
+        <mxCell id="lazy_loading" value="🎯 LAZY LOADING&#xa;• Defer model solving&#xa;• Load on user demand&#xa;• Progressive UI loading&#xa;• Instant app startup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="750" y="740" width="150" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Progressive Loading -->
+        <mxCell id="progressive_loading" value="🎯 PROGRESSIVE LOADING&#xa;• Metadata first&#xa;• Model on demand&#xa;• Staged UI reveal&#xa;• Better UX" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="920" y="740" width="150" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Memory Management -->
+        <mxCell id="memory_mgmt" value="🎯 MEMORY MGMT&#xa;• LRU cache limits&#xa;• Cleanup strategies&#xa;• Memory monitoring&#xa;• Efficient storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="740" width="150" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Chart Optimization -->
+        <mxCell id="chart_opt" value="🎯 CHART OPTIMIZATION&#xa;• Virtualization&#xa;• Streaming mode&#xa;• Pagination&#xa;• Responsive design" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="740" width="150" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Data Flow Arrows -->
+        <mxCell id="arrow1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="streamlit_config" target="session_init" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="module_imports" target="session_init" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#FF6600;" source="session_init" target="baseline_check" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;strokeColor=#FF0000;" source="baseline_check" target="model_solving" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#FF6600;" source="model_solving" target="cache_storage" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="cache_storage" target="viz_engine" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0066CC;" source="viz_engine" target="ui_components" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- User Interaction Flow -->
+        <mxCell id="arrow8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#00CC66;" source="variable_selection" target="viz_rendering" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#00CC66;" source="viz_rendering" target="cf_flow" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Cache Connections -->
+        <mxCell id="arrow10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;strokeColor=#666666;dashed=1;" source="cache_l1" target="cache_l2" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;strokeColor=#666666;dashed=1;" source="cache_l2" target="cache_l3" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Performance Metrics -->
+        <mxCell id="perf_metrics" value="Performance Metrics&#xa;&#xa;• Cold Start: 15-30s&#xa;• Warm Start: 1-2s&#xa;• Memory: 200-500MB&#xa;• Variable Selection: 0.1s&#xa;• Visualization: 2-5s&#xa;• Model Solving: 10-25s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="300" width="200" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- API Mode -->
+        <mxCell id="api_mode" value="API Mode Alternative&#xa;&#xa;• Remote model solving&#xa;• Reduced local resources&#xa;• Network latency trade-off&#xa;• Scalable backend&#xa;• Consistent interface" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="950" y="300" width="180" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Critical Path -->
+        <mxCell id="critical_path" value="🚨 CRITICAL PATH 🚨" style="text;html=1;strokeColor=#FF0000;fillColor=#ffcccc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;fontColor=#FF0000;" vertex="1" parent="1">
+          <mxGeometry x="650" y="140" width="150" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend_title" value="Legend" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="900" width="60" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend_startup" value="App Startup Flow" style="text;html=1;strokeColor=#0066CC;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="940" width="130" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend_bottleneck" value="Performance Bottleneck" style="text;html=1;strokeColor=#FF0000;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="970" width="150" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend_interaction" value="User Interaction Flow" style="text;html=1;strokeColor=#00CC66;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="1000" width="150" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend_cache" value="Cache Architecture" style="text;html=1;strokeColor=#666666;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="1030" width="130" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Architecture Layers -->
+        <mxCell id="arch_layers" value="Architecture Layers&#xa;&#xa;📱 Streamlit UI Layer&#xa;├── app.py (Main Interface)&#xa;├── visualization.py (Components)&#xa;└── API integration&#xa;&#xa;🧮 Computation Layer&#xa;├── model_pipeline.py&#xa;├── models.py&#xa;├── equations.py&#xa;└── solvers.py&#xa;&#xa;💾 Data Layer&#xa;├── data.npz&#xa;├── Session State&#xa;└── Cache System" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1450" y="180" width="180" height="280" as="geometry" />
+        </mxCell>
+
+        <!-- Deployment Modes -->
+        <mxCell id="deployment_modes" value="Deployment Modes&#xa;&#xa;🖥️ Local Development&#xa;• Full debugging&#xa;• Hot reload&#xa;• 8GB+ RAM&#xa;&#xa;☁️ Streamlit Cloud&#xa;• Auto deployment&#xa;• 1GB RAM limit&#xa;• Cold start critical&#xa;&#xa;🌐 API Mode&#xa;• Scalable backend&#xa;• Network latency&#xa;• Distributed compute" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f3ff;strokeColor=#0066CC;" vertex="1" parent="1">
+          <mxGeometry x="1450" y="500" width="180" height="200" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile> 

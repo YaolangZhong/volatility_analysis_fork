@@ -115,6 +115,21 @@ def solve_counterfactual_unified(importers, exporters, sectors, tariff_data):
         results = pipeline.get_counterfactual_results(scenario_key)
         return results, scenario_key
 
+def get_baseline_solution_lazy():
+    """🚀 PERFORMANCE OPTIMIZATION: Lazy loading for baseline model.
+    
+    Only solve the baseline model when the user actually needs it,
+    not immediately on app startup. This eliminates the 10-30 second
+    startup delay.
+    """
+    if st.session_state.get('baseline_solution') is None:
+        with st.spinner("🔄 Loading baseline model (first time only)..."):
+            baseline_sol, baseline_params = solve_benchmark_unified()
+            st.session_state['baseline_solution'] = baseline_sol
+            st.session_state['baseline_params'] = baseline_params
+            st.success("✅ Baseline model loaded successfully!")
+    return st.session_state['baseline_solution'], st.session_state['baseline_params']
+
 def create_excel_download_button(sol: ModelSol, params: ModelParams, scenario_key: Optional[str], variable_name: Optional[str] = None, unique_key: str = "", baseline_sol: Optional[ModelSol] = None):
     """Create download button for Excel export."""
     try:
@@ -647,14 +662,10 @@ def main():
         st.session_state['baseline_solution'] = None
         st.session_state['baseline_params'] = None
     
-    # Ensure baseline model is solved and cached in session state
-    if st.session_state['baseline_solution'] is None:
-        baseline_sol, baseline_params = solve_benchmark_unified()
-        st.session_state['baseline_solution'] = baseline_sol
-        st.session_state['baseline_params'] = baseline_params
-    else:
-        baseline_sol = st.session_state['baseline_solution']
-        baseline_params = st.session_state['baseline_params']
+    # ✅ PERFORMANCE FIX: Use lazy loading instead of immediate solving
+    # Don't solve baseline model immediately - defer until user needs it
+    baseline_sol = st.session_state['baseline_solution']
+    baseline_params = st.session_state['baseline_params']
     
     # Initialize visualization engine
     country_names, sector_names = get_country_sector_names()
@@ -681,11 +692,13 @@ def main():
         st.header("🏛️ Baseline Model Analysis")
         st.info("Using real-world tariff data from the dataset")
         
-        # Use cached baseline model from session state
+        # 🚀 PERFORMANCE OPTIMIZATION: Use lazy loading
+        # Only load baseline model when user selects this tab
         baseline_scenario_key = "benchmark"
         
+        # Check if model is already loaded
         if baseline_sol is not None and baseline_params is not None:
-            st.success("✅ Baseline model loaded successfully!")
+            st.success("✅ Baseline model already loaded!")
             
             # Downloads and Visualization for baseline
             st.markdown("---")
@@ -696,8 +709,19 @@ def main():
             st.markdown("---")
             st.header("📊 Baseline Model Visualization")
             viz_engine.visualize_single_model(baseline_sol)  # Single model view
+            
         else:
-            st.error("Failed to load baseline model.")
+            # Show load button for first-time loading
+            st.warning("⏳ Baseline model needs to be loaded (one-time operation)")
+            
+            col1, col2, col3 = st.columns([1, 1, 1])
+            with col2:
+                if st.button("🚀 Load Baseline Model", key="load_baseline", type="primary"):
+                    baseline_sol, baseline_params = get_baseline_solution_lazy()
+                    # Force a rerun to show the loaded model
+                    st.rerun()
+            
+            st.info("💡 **Why the delay?** The baseline model involves solving a complex economic equilibrium with 49 countries and 26 sectors. This one-time computation takes 10-30 seconds but is cached for the entire session.")
     
     else:
         # Counterfactual Model Section
@@ -767,7 +791,7 @@ def main():
                 viz_engine.visualize_single_model(cf_sol)
                 
             else:  # Percentage Change from Baseline
-                # Use cached baseline model from session state (no need to re-solve)
+                # Check if baseline model is loaded for comparison
                 if baseline_sol is not None:
                     st.subheader("📥 Download Percentage Changes (Baseline → Counterfactual)")
                     show_variable_download_section(cf_sol, cf_params, cf_scenario_key, "counterfactual_changes", baseline_sol)
@@ -776,7 +800,12 @@ def main():
                     st.subheader("📊 Percentage Change Visualization (Baseline → Counterfactual)")
                     viz_engine.visualize_comparison(baseline_sol, cf_sol)
                 else:
-                    st.error("Failed to load baseline model for comparison")
+                    st.warning("⚠️ Baseline model needed for percentage change comparison")
+                    st.info("💡 Go to the **Baseline Model** tab first to load the baseline model, then return here for percentage change analysis.")
+                    
+                    if st.button("🚀 Load Baseline Model Now", key="load_baseline_for_cf"):
+                        baseline_sol, baseline_params = get_baseline_solution_lazy()
+                        st.rerun()
         elif all(x is not None for x in cf_config if cf_config):
             st.info("👆 Click 'Solve Counterfactual Model' to run the analysis and view results.")
         else:
