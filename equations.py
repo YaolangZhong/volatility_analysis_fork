@@ -212,58 +212,60 @@ def calc_D_prime(
 
     return D_prime
 
-def calc_production(X, pi):
-    return np.sum(X[:, np.newaxis, :] * pi, axis=0)
+def calc_production(X, pi, tilde_tau):
+    return np.sum(X[:, np.newaxis, :] * pi / tilde_tau, axis=0)
 
 def calc_sector_links(
-    X: np.ndarray,          # shape (N, S), total expenditure by country and sector
-    pi: np.ndarray,         # shape (N, N, S), trade shares (importer, exporter, sector)
-    tilde_tau: np.ndarray,  # shape (N, N, S), tariff factors (importer, exporter, sector)
-    gamma: np.ndarray       # shape (N, S, S), IO coefficients (country, using_sector, input_sector)
+    X_prod: np.ndarray,     # shape (N, S), output of sector s in country n
+    gamma: np.ndarray,      # shape (N, S, S), sharing of sector s in producing goods in sector k country i
+    pi: np.ndarray          # shape (N, N, S), sharing of country n in exporting goods in sector s to country i
 ) -> np.ndarray:
     """
     Calculate sector links representing import linkages between countries and sectors.
     
+    The output sector_links has shape (N, S, N, S) indexing (i, k, n, s) meaning 
+    sector k of country i imports goods from sector s in country n.
+    
     The construction follows:
-    1. Calculate imports: X[n,j] * pi[n,i,j] / (1+tau[n,i,j])  
-    2. Expand to 4D with gamma coefficients: imports * gamma[n,j,k]
-    3. Reshape from (n,i,j,k) to (n,k,i,j) for interpretation as 
-       "country n's imports for output sector k from country i sector j"
+    sector_links[i, k, n, s] = X_prod[n, s] * gamma[i, k, s] * pi[i, n, s]
+    
+    This represents how much sector k in country i imports from sector s in country n,
+    which is the output of sector s in country n (X_prod[n, s]), multiplied by:
+    - The share of sector s inputs used by sector k in country i (gamma[i, k, s])
+    - The share of country n in exports to country i for sector s (pi[i, n, s])
     
     Parameters
     ----------
-    X : np.ndarray, shape (N, S)
-        Total expenditure by importer country and sector
-    pi : np.ndarray, shape (N, N, S)
-        Trade shares (importer, exporter, sector)
-    tilde_tau : np.ndarray, shape (N, N, S)
-        Tariff factors (importer, exporter, sector)
+    X_prod : np.ndarray, shape (N, S)
+        Output of sector s in country n
     gamma : np.ndarray, shape (N, S, S)
-        IO coefficients (country, using_sector, input_sector)
+        Input-output coefficients: sharing of sector s in producing goods in sector k country i
+        Indexing: (i, k, s) where i=country, k=output sector, s=input sector
+    pi : np.ndarray, shape (N, N, S)
+        Trade shares: sharing of country n in exporting goods in sector s to country i
+        Indexing: (i, n, s) where i=importer, n=exporter, s=sector
     
     Returns
     -------
     sector_links : np.ndarray, shape (N, S, N, S)
-        Import linkages (importer_country, output_sector, exporter_country, input_sector)
+        Import linkages indexed as (i, k, n, s):
+        sector k of country i imports from sector s in country n
     """
-    N, S = X.shape
+    # Vectorized calculation using NumPy broadcasting
+    # sector_links[i, k, n, s] = X_prod[n, s] * gamma[i, k, s] * pi[i, n, s]
     
-    # Step 1: Calculate imports for each (n,i,j) 
-    # imports[n,i,j] = X[n,j] * pi[n,i,j] / tilde_tau[n,i,j]
-    imports = X[:, np.newaxis, :] * pi / tilde_tau  # shape (N, N, S)
+    # Reshape arrays for broadcasting:
+    # X_prod: (N, S) -> (1, 1, N, S) to broadcast over (i, k) dimensions
+    # gamma: (N, S, S) -> (N, S, 1, S) to broadcast over (n) dimension  
+    # pi: (N, N, S) -> (N, 1, N, S) to broadcast over (k) dimension
     
-    # Step 2: Expand using gamma coefficients
-    # For each country n and output sector k, calculate how much is imported
-    # from each (i,j) weighted by gamma[n,k,j]
-    sector_links = np.zeros((N, S, N, S))
+    X_prod_bc = X_prod[np.newaxis, np.newaxis, :, :]        # shape: (1, 1, N, S)
+    gamma_bc = gamma[:, :, np.newaxis, :]                   # shape: (N, S, 1, S)
+    pi_bc = pi[:, np.newaxis, :, :]                         # shape: (N, 1, N, S)
     
-    for n in range(N):
-        for k in range(S):  # output sector
-            for i in range(N):  # exporter country
-                for j in range(S):  # input sector
-                    # Country n's imports for output sector k from country i sector j
-                    sector_links[n, k, i, j] = imports[n, i, j] * gamma[n, k, j]
-    
+    # Element-wise multiplication with broadcasting
+    sector_links = X_prod_bc * gamma_bc * pi_bc            # shape: (N, S, N, S)
+
     return sector_links
 
 
@@ -310,9 +312,9 @@ def generate_equilibrium(
     real_w_hat  = w_hat / p_index
     real_I_prime = I_prime / p_index
     X_prime = Xf_prime + Xm_prime
-    Xf_prod_prime = calc_production(Xf_prime, pif)
-    Xm_prod_prime = calc_production(Xm_prime, pim)
+    Xf_prod_prime = calc_production(Xf_prime, pif, tilde_tau_prime)
+    Xm_prod_prime = calc_production(Xm_prime, pim, tilde_tau_prime)
     X_prod_prime = Xf_prod_prime + Xm_prod_prime
-    sector_links = calc_sector_links(X_prime, pi_prime, tilde_tau_prime, gamma)
+    sector_links = calc_sector_links(X_prod_prime, gamma, pi_prime)
 
     return (c_hat, Pf_hat, Pm_hat, pif_hat, pim_hat, pif_prime, pim_prime, Xf_prime, Xm_prime, D_prime, p_index, real_w_hat, X_prime, Xf_prod_prime, Xm_prod_prime, X_prod_prime, I_prime, output_prime, real_I_prime, sector_links)

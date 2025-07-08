@@ -115,21 +115,6 @@ def solve_counterfactual_unified(importers, exporters, sectors, tariff_data):
         results = pipeline.get_counterfactual_results(scenario_key)
         return results, scenario_key
 
-def get_baseline_solution_lazy():
-    """🚀 PERFORMANCE OPTIMIZATION: Lazy loading for baseline model.
-    
-    Only solve the baseline model when the user actually needs it,
-    not immediately on app startup. This eliminates the 10-30 second
-    startup delay.
-    """
-    if st.session_state.get('baseline_solution') is None:
-        with st.spinner("🔄 Loading baseline model (first time only)..."):
-            baseline_sol, baseline_params = solve_benchmark_unified()
-            st.session_state['baseline_solution'] = baseline_sol
-            st.session_state['baseline_params'] = baseline_params
-            st.success("✅ Baseline model loaded successfully!")
-    return st.session_state['baseline_solution'], st.session_state['baseline_params']
-
 def create_excel_download_button(sol: ModelSol, params: ModelParams, scenario_key: Optional[str], variable_name: Optional[str] = None, unique_key: str = "", baseline_sol: Optional[ModelSol] = None):
     """Create download button for Excel export."""
     try:
@@ -286,7 +271,7 @@ def create_excel_locally(sol: ModelSol, params: ModelParams, variable_name: Opti
                 # Special handling for sector_links - flatten to 2D
                 from API.visualization import flatten_sector_links_for_viz
                 flattened_data, row_labels, col_labels = flatten_sector_links_for_viz(data, params)
-                df = pd.DataFrame(flattened_data, index=row_labels, columns=col_labels)
+                df = pd.DataFrame(flattened_data, index=pd.Index(row_labels), columns=pd.Index(col_labels))
             else:
                 # For other 4D+ arrays, create a flattened version
                 reshaped_data = data.reshape(data.shape[0], -1)
@@ -332,7 +317,7 @@ def create_excel_locally(sol: ModelSol, params: ModelParams, variable_name: Opti
                                 # Special handling for sector_links - flatten to 2D
                                 from API.visualization import flatten_sector_links_for_viz
                                 flattened_data, row_labels, col_labels = flatten_sector_links_for_viz(data_to_use, params)
-                                df = pd.DataFrame(flattened_data, index=row_labels, columns=col_labels)
+                                df = pd.DataFrame(flattened_data, index=pd.Index(row_labels), columns=pd.Index(col_labels))
                             else:
                                 continue  # Skip other 4D+ variables
                             
@@ -661,9 +646,21 @@ def main():
     if 'baseline_solution' not in st.session_state:
         st.session_state['baseline_solution'] = None
         st.session_state['baseline_params'] = None
-    
-    # ✅ PERFORMANCE FIX: Use lazy loading instead of immediate solving
-    # Don't solve baseline model immediately - defer until user needs it
+
+    # 🚀 IMMEDIATE BASELINE LOADING: Load baseline model on startup
+    # This ensures the model is ready for immediate use
+    if st.session_state['baseline_solution'] is None:
+        with st.spinner("🔄 Loading baseline model (this may take 15-30 seconds)..."):
+            baseline_sol, baseline_params = solve_benchmark_unified()
+            st.session_state['baseline_solution'] = baseline_sol
+            st.session_state['baseline_params'] = baseline_params
+            if baseline_sol is not None:
+                st.success("✅ Baseline model loaded successfully!")
+            else:
+                st.error("❌ Failed to load baseline model")
+                return
+
+    # Get solutions from session state (they're now guaranteed to be loaded)
     baseline_sol = st.session_state['baseline_solution']
     baseline_params = st.session_state['baseline_params']
     
@@ -692,13 +689,12 @@ def main():
         st.header("🏛️ Baseline Model Analysis")
         st.info("Using real-world tariff data from the dataset")
         
-        # 🚀 PERFORMANCE OPTIMIZATION: Use lazy loading
-        # Only load baseline model when user selects this tab
+        # Model is already loaded on startup, so we can show results immediately
         baseline_scenario_key = "benchmark"
         
-        # Check if model is already loaded
+        # Show baseline model status
         if baseline_sol is not None and baseline_params is not None:
-            st.success("✅ Baseline model already loaded!")
+            st.success("✅ Baseline model ready for analysis!")
             
             # Downloads and Visualization for baseline
             st.markdown("---")
@@ -711,17 +707,9 @@ def main():
             viz_engine.visualize_single_model(baseline_sol)  # Single model view
             
         else:
-            # Show load button for first-time loading
-            st.warning("⏳ Baseline model needs to be loaded (one-time operation)")
-            
-            col1, col2, col3 = st.columns([1, 1, 1])
-            with col2:
-                if st.button("🚀 Load Baseline Model", key="load_baseline", type="primary"):
-                    baseline_sol, baseline_params = get_baseline_solution_lazy()
-                    # Force a rerun to show the loaded model
-                    st.rerun()
-            
-            st.info("💡 **Why the delay?** The baseline model involves solving a complex economic equilibrium with 49 countries and 26 sectors. This one-time computation takes 10-30 seconds but is cached for the entire session.")
+            st.error("❌ Baseline model failed to load. Please refresh the page or clear caches.")
+            if st.button("🔄 Refresh Page", key="refresh_page"):
+                st.rerun()
     
     else:
         # Counterfactual Model Section
@@ -801,10 +789,9 @@ def main():
                     viz_engine.visualize_comparison(baseline_sol, cf_sol)
                 else:
                     st.warning("⚠️ Baseline model needed for percentage change comparison")
-                    st.info("💡 Go to the **Baseline Model** tab first to load the baseline model, then return here for percentage change analysis.")
+                    st.info("💡 The baseline model was loaded on startup, but there may have been an error. Try refreshing the page.")
                     
-                    if st.button("🚀 Load Baseline Model Now", key="load_baseline_for_cf"):
-                        baseline_sol, baseline_params = get_baseline_solution_lazy()
+                    if st.button("🔄 Refresh Page", key="refresh_for_baseline"):
                         st.rerun()
         elif all(x is not None for x in cf_config if cf_config):
             st.info("👆 Click 'Solve Counterfactual Model' to run the analysis and view results.")
