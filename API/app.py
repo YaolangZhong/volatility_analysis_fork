@@ -260,14 +260,25 @@ def create_csv_locally(sol: ModelSol, params: ModelParams, baseline_sol: Optiona
             sector_edge_rows = []
             
             # Create flattened sector names: "CountryName_SectorName"
+            # ik pairs: importer_country + output_sector (rows)
             import_sector_labels = []
+            # ns pairs: exporter_country + input_sector (columns)
             export_sector_labels = []
+            
+            # ik pairs (rows): importer_country + output_sector
             for country in params.country_list:
                 for sector in params.sector_list:
                     import_sector_labels.append(f"{country}_{sector}")
+            
+            # ns pairs (columns): exporter_country + input_sector
+            for country in params.country_list:
+                for sector in params.sector_list:
                     export_sector_labels.append(f"{country}_{sector}")
             
             # Flatten sector_links from (N,S,N,S) to (NS,NS)
+            # sector_links[i, k, n, s] -> reshape gives (ik, ns) indexing
+            # Rows: ik pairs (importer_country + output_sector)
+            # Columns: ns pairs (exporter_country + input_sector)
             N, S = len(params.country_list), len(params.sector_list)
             flattened_data = sector_links_data.reshape(N*S, N*S)
             

@@ -553,34 +553,43 @@ def flatten_sector_links_for_viz(sector_links: np.ndarray, params: ModelParams) 
     Flatten sector_links from 4D (N, S, N, S) to 2D (NS, NS) for visualization.
     
     Args:
-        sector_links: 4D array with shape (importer_country, output_sector, exporter_country, input_sector)
+        sector_links: 4D array with shape (i, k, n, s) where:
+        - i: importer country
+        - k: output sector
+        - n: exporter country  
+        - s: input sector
         params: Model parameters containing country and sector lists
         
     Returns:
         Tuple of (flattened_2d_array, row_labels, col_labels)
+        - Rows: ik pairs (importer_country + output_sector)
+        - Columns: ns pairs (exporter_country + input_sector)
     """
     N, S, _, _ = sector_links.shape
     NS = N * S
     
     # Create labels using actual country and sector names from params
-    row_labels = []  # Importer country-output sector combinations
-    col_labels = []  # Exporter country-input sector combinations
+    row_labels = []  # ik pairs: importer_country + output_sector
+    col_labels = []  # ns pairs: exporter_country + input_sector
     
-    # Row labels: importer_country + output_sector 
-    for n in range(N):
+    # Row labels: importer_country + output_sector (ik pairs)
+    for i in range(N):
+        for k in range(S):
+            country_name = params.country_list[i] if i < len(params.country_list) else f"Country_{i}"
+            sector_name = params.sector_list[k] if k < len(params.sector_list) else f"Sector_{k}"
+            row_labels.append(f"{country_name}_{sector_name}")
+    
+    # Column labels: exporter_country + input_sector (ns pairs)
+    for n in range(N): 
         for s in range(S):
             country_name = params.country_list[n] if n < len(params.country_list) else f"Country_{n}"
             sector_name = params.sector_list[s] if s < len(params.sector_list) else f"Sector_{s}"
-            row_labels.append(f"{country_name}_{sector_name}")
-    
-    # Column labels: exporter_country + input_sector
-    for i in range(N): 
-        for j in range(S):
-            country_name = params.country_list[i] if i < len(params.country_list) else f"Country_{i}"
-            sector_name = params.sector_list[j] if j < len(params.sector_list) else f"Sector_{j}"
             col_labels.append(f"{country_name}_{sector_name}")
     
     # Reshape 4D (N, S, N, S) to 2D (NS, NS)
+    # sector_links[i, k, n, s] -> reshape gives (ik, ns) indexing
+    # Rows: ik pairs (importer_country + output_sector)
+    # Columns: ns pairs (exporter_country + input_sector)
     flattened = sector_links.reshape(NS, NS)
     
     return flattened, row_labels, col_labels
