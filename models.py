@@ -713,6 +713,19 @@ class Model:
         m.sol = cast(ModelSol, ModelSol.load_from_npz(sols_file))
         return m
 
+    def save_to_pickle(self, filename: str) -> None:
+        """Save complete model to a single pickle file."""
+        import pickle
+        with open(filename, 'wb') as f:
+            pickle.dump(self, f)
+    
+    @classmethod
+    def load_from_pickle(cls, filename: str) -> "Model":
+        """Load complete model from a pickle file."""
+        import pickle
+        with open(filename, 'rb') as f:
+            return pickle.load(f)
+
 
 # === Demo Function for ModelRegistry Usage ===
 def demo_model_registry():
