@@ -96,8 +96,17 @@ class ModelAPIClient:
     def solve_counterfactual(self, importers: List[str], exporters: List[str], 
                            sectors: List[str], tariff_data: Dict) -> str:
         """
-        Solve counterfactual model via API.
-        Returns scenario key for later retrieval.
+        Solve counterfactual model with specified tariff changes.
+        
+        Args:
+            importers: List of importing country names
+            exporters: List of exporting country names
+            sectors: List of sector names
+            tariff_data: Dict mapping (importer, exporter, sector) triplets to tariff rates.
+                        Unified format used by all tariff modes for simplified processing.
+        
+        Returns:
+            str: Scenario key for retrieving results
         """
         request_data = {
             "importers": importers,

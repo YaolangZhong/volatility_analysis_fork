@@ -277,9 +277,9 @@ class TariffConfiguration:
     @classmethod
     def from_country_sector_rates(cls,
                                  rates: Dict[Tuple[str, str, str], float],
-                                 countries: List[str] = None,
-                                 sectors: List[str] = None,
-                                 description: str = None) -> "TariffConfiguration":
+                                 countries: List[str] | None = None,
+                                 sectors: List[str] | None = None,
+                                 description: str | None = None) -> "TariffConfiguration":
         """
         Create tariff configuration with rates specified by country-sector combinations.
         

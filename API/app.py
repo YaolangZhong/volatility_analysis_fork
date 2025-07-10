@@ -20,13 +20,15 @@ import tempfile
 import io
 from typing import List, Optional, Tuple, Union
 from datetime import datetime
+import time # Added for cache clearing
 
 # MUST be first Streamlit command
-st.set_page_config(layout="wide")
-
-# Configuration for API mode
-USE_API = st.sidebar.checkbox("Use API Mode", value=False, help="Toggle between local and API-based model solving")
-API_URL = st.sidebar.text_input("API Server URL", value="http://localhost:8000", help="URL of the API server")
+st.set_page_config(
+    page_title="Enhanced Model Output Explorer",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # Add parent directory to path for imports
 import sys
@@ -41,68 +43,102 @@ if str(parent_dir) not in sys.path:
 # Always import local modules for type hints and fallback
 from model_pipeline import (
     get_model_pipeline, 
-    solve_benchmark_cached, 
     solve_counterfactual_cached,
     get_metadata_cached
 )
 from visualization import ModelVisualizationEngine
-from models import ModelSol, ModelParams
+from models import ModelSol, ModelParams, Model
 
-# Import API client for API mode
-api_client = None
-API_AVAILABLE = False
-if USE_API:
+def get_api_client(use_api: bool, api_url: str):
+    """Initialize API client if needed."""
+    if not use_api:
+        return None, False
+        
     try:
         from api_client import ModelAPIClient
-        api_client = ModelAPIClient(API_URL)
+        api_client = ModelAPIClient(api_url)
         # Test if API is available
         try:
             api_client.get_metadata()
-            API_AVAILABLE = True
+            return api_client, True
         except:
-            API_AVAILABLE = False
+            return api_client, False
     except ImportError:
         st.sidebar.error("API client not available. Install required dependencies.")
-        API_AVAILABLE = False
+        return None, False
 
-def show_api_status():
+def show_api_status(use_api: bool, api_available: bool, api_url: str):
     """Show API connection status in sidebar."""
-    if USE_API:
-        if API_AVAILABLE:
-            st.sidebar.success(f"✅ API Connected: {API_URL}")
+    if use_api:
+        if api_available:
+            st.sidebar.success(f"✅ API Connected: {api_url}")
         else:
-            st.sidebar.error(f"❌ API Unavailable: {API_URL}")
+            st.sidebar.error(f"❌ API Unavailable: {api_url}")
     else:
         st.sidebar.info("🔧 Local Mode Active")
 
 def get_country_sector_names():
-    """Get country and sector names - works with both API and local mode."""
-    if USE_API and API_AVAILABLE and api_client is not None:
-        try:
-            metadata = api_client.get_metadata()  # type: ignore
-            return metadata['countries'], metadata['sectors']
-        except Exception as e:
-            st.error(f"Failed to get metadata from API: {e}")
-            return [], []
-    else:
-        # Use cached metadata that doesn't require solving the model
-        countries, sectors, N, S = get_metadata_cached()
-        return countries, sectors
+    """Get country and sector names for UI."""
+    # Use cached metadata that doesn't require solving the model
+    countries, sectors, N, S = get_metadata_cached()
+    return countries, sectors
 
-def solve_benchmark_unified():
-    """Solve benchmark model - unified interface for API/local."""
-    if USE_API and API_AVAILABLE and api_client is not None:
+def load_baseline_model(pickle_path: str = "baseline_model.pkl") -> tuple[ModelSol, ModelParams]:
+    """
+    Load pre-solved baseline model from pickle file.
+    
+    Parameters
+    ----------
+    pickle_path : str, optional
+        Path to baseline model pickle file (default: "baseline_model.pkl")
+        
+    Returns
+    -------
+    tuple[ModelSol, ModelParams]
+        Loaded baseline solution and parameters
+        
+    Raises
+    ------
+    FileNotFoundError
+        If baseline_model.pkl is not found
+    RuntimeError
+        If model loading fails
+    """
+    from pathlib import Path
+    
+    # Check if pickle file exists
+    if not Path(pickle_path).exists():
+        raise FileNotFoundError(
+            f"Baseline model file '{pickle_path}' not found. "
+            f"Please run 'python solve_baseline_from_data.py' first to create it."
+        )
+    
+    try:
+        # Load the pre-solved model
+        model = Model.load_from_pickle(pickle_path)
+        
+        if model.sol is None:
+            raise RuntimeError("Loaded model has no solution. The baseline model may be corrupted.")
+        
+        return model.sol, model.params
+        
+    except Exception as e:
+        raise RuntimeError(f"Failed to load baseline model from '{pickle_path}': {e}")
+
+def solve_benchmark_unified(api_client: Optional[object], api_available: bool, api_url: str):
+    """Load baseline model - unified interface for API/local (DEPRECATED - use load_baseline_model)."""
+    if api_client is not None and api_available:
         try:
             return api_client.solve_benchmark()  # type: ignore
         except Exception as e:
-            st.error(f"API benchmark solving failed: {e}")
+            st.error(f"API baseline loading failed: {e}")
             return None, None
     else:
-        return solve_benchmark_cached()
+        return load_baseline_model()
 
-def solve_counterfactual_unified(importers, exporters, sectors, tariff_data):
+def solve_counterfactual_unified(importers, exporters, sectors, tariff_data, api_client=None, api_available=False):
     """Solve counterfactual model - unified interface for API/local."""
-    if USE_API and API_AVAILABLE and api_client is not None:
+    if api_client is not None and api_available:
         try:
             scenario_key = api_client.solve_counterfactual(importers, exporters, sectors, tariff_data)  # type: ignore
             return api_client.get_counterfactual_results(scenario_key), scenario_key  # type: ignore
@@ -115,10 +151,10 @@ def solve_counterfactual_unified(importers, exporters, sectors, tariff_data):
         results = pipeline.get_counterfactual_results(scenario_key)
         return results, scenario_key
 
-def create_excel_download_button(sol: ModelSol, params: ModelParams, scenario_key: Optional[str], variable_name: Optional[str] = None, unique_key: str = "", baseline_sol: Optional[ModelSol] = None):
+def create_excel_download_button(sol: ModelSol, params: ModelParams, scenario_key: Optional[str], variable_name: Optional[str] = None, unique_key: str = "", baseline_sol: Optional[ModelSol] = None, api_client=None, api_available=False):
     """Create download button for Excel export."""
     try:
-        if USE_API and API_AVAILABLE and api_client is not None and scenario_key:
+        if api_client is not None and api_available and scenario_key:
             # Use API download
             if variable_name:
                 excel_data = api_client.download_variable_excel(scenario_key, variable_name)  # type: ignore
@@ -480,6 +516,28 @@ def create_counterfactual_ui(suffix: str = "", description: str = "Counterfactua
         help="Uniform: Same rate for all pairs. Country: Individual rates per country pair. Sector: One rate per sector (applied to all exporters). Country-Sector: Individual rates per country pair within each sector."
     )
     
+    # Generate unified tariff_data based on the selected mode
+    tariff_data = generate_unified_tariff_data(
+        tariff_mode, cf_importers, cf_exporters, cf_sectors, suffix, description
+    )
+
+    # Validate selection
+    if cf_importers and cf_exporters and cf_sectors and tariff_data:
+        cf_importers_in_model_order = [c for c in country_names if c in cf_importers]
+        cf_exporters_in_model_order = [c for c in country_names if c in cf_exporters]
+        return cf_importers_in_model_order, cf_exporters_in_model_order, cf_sectors, tariff_data
+    else:
+        if not (cf_importers and cf_exporters and cf_sectors):
+            st.warning(f"Please select at least one importer, one exporter, and one sector for {description}.")
+        return None, None, None, None
+
+
+def generate_unified_tariff_data(tariff_mode: str, cf_importers: list, cf_exporters: list, 
+                               cf_sectors: list, suffix: str, description: str) -> dict:
+    """
+    Generate unified tariff_data format {(importer, exporter, sector): rate} for all modes.
+    This simplifies downstream processing by always using the same data structure.
+    """
     tariff_data = {}
     
     if tariff_mode == "Uniform Rate":
@@ -491,11 +549,13 @@ def create_counterfactual_ui(suffix: str = "", description: str = "Counterfactua
             key=f"uniform_tariff_rate{suffix}"
         )
         
-        # Apply uniform rate to all selected pairs
-        if cf_importers and cf_exporters:
+        # Apply uniform rate to all selected (importer, exporter, sector) combinations
+        if cf_importers and cf_exporters and cf_sectors:
             for importer in cf_importers:
                 for exporter in cf_exporters:
-                    tariff_data[(importer, exporter)] = uniform_rate
+                    if importer != exporter:  # No self-tariffs
+                        for sector in cf_sectors:
+                            tariff_data[(importer, exporter, sector)] = uniform_rate
     
     elif tariff_mode == "Custom Rates by Country":
         # Custom rates by country
@@ -542,16 +602,20 @@ def create_counterfactual_ui(suffix: str = "", description: str = "Counterfactua
                                     key=f"tariff_{importer}_{exporter}{suffix}",
                                     help=f"Tariff rate imposed by {importer} on imports from {exporter}"
                                 )
-                                tariff_data[(importer, exporter)] = tariff_rate
+                                # Apply this rate to ALL sectors for this country pair
+                                for sector in cf_sectors:
+                                    tariff_data[(importer, exporter, sector)] = tariff_rate
                             else:
                                 st.write(f"🚫 {exporter} (self)")
-                                tariff_data[(importer, exporter)] = 0  # No self-tariffs
+                                # No self-tariffs for any sector
+                                for sector in cf_sectors:
+                                    tariff_data[(importer, exporter, sector)] = 0
                 
                 if i < len(cf_importers) - 1:  # Add separator between importers
                     st.write("---")
     
     elif tariff_mode == "Custom Rates by Sector":
-        # New simple sector-based tariffs: each importer sets one rate per sector for ALL exporters
+        # Sector-based tariffs: each importer sets one rate per sector for ALL exporters
         if cf_importers and cf_sectors:
             st.write("**Configure tariff rates by sector for each importer:**")
             st.info("Each importer sets one tariff rate per sector, applied to ALL selected exporters.")
@@ -575,14 +639,16 @@ def create_counterfactual_ui(suffix: str = "", description: str = "Counterfactua
                                 key=f"simple_sector_tariff_{importer}_{sector}{suffix}",
                                 help=f"Tariff rate from {importer} on {sector} imports from ALL selected exporters"
                             )
-                            # Store using (importer, sector) as key - will be expanded to all exporters
-                            tariff_data[(importer, sector)] = tariff_rate
+                            # Apply this rate to ALL exporters for this importer-sector combination
+                            for exporter in cf_exporters:
+                                if importer != exporter:  # No self-tariffs
+                                    tariff_data[(importer, exporter, sector)] = tariff_rate
                 
                 # Add spacing between importers
                 if i < len(cf_importers) - 1:
                     st.write("---")
     
-    else:
+    else:  # Custom Rates by Country-Sector
         # Custom rates by country-sector (detailed version)
         if cf_importers and cf_exporters and cf_sectors:
             st.write("**Configure individual tariff rates by importer → exporter → sector:**")
@@ -647,17 +713,9 @@ def create_counterfactual_ui(suffix: str = "", description: str = "Counterfactua
                 if i < len(cf_importers) - 1:
                     st.write("=" * 50)
     
-    # Validate selection
-    if cf_importers and cf_exporters and cf_sectors and tariff_data:
-        cf_importers_in_model_order = [c for c in country_names if c in cf_importers]
-        cf_exporters_in_model_order = [c for c in country_names if c in cf_exporters]
-        return cf_importers_in_model_order, cf_exporters_in_model_order, cf_sectors, tariff_data
-    else:
-        if not (cf_importers and cf_exporters and cf_sectors):
-            st.warning(f"Please select at least one importer, one exporter, and one sector for {description}.")
-        return None, None, None, None
+    return tariff_data
 
-def show_variable_download_section(sol: ModelSol, params: ModelParams, scenario_key: Optional[str] = None, unique_key: str = "", baseline_sol: Optional[ModelSol] = None):
+def show_variable_download_section(sol: ModelSol, params: ModelParams, scenario_key: Optional[str] = None, unique_key: str = "", baseline_sol: Optional[ModelSol] = None, api_client=None, api_available=False):
     """Show variable download options."""
     st.markdown("### Download Options")
     if baseline_sol is not None:
@@ -667,102 +725,83 @@ def show_variable_download_section(sol: ModelSol, params: ModelParams, scenario_
         st.info("📊 **Excel**: All variables in separate sheets (includes sector_links, country_links and trade flows)")  
         st.info("📊 **Network Data**: ZIP file with 4 CSV files for network analysis (country/sector nodes & edges)")
     
-    create_excel_download_button(sol, params, scenario_key, None, unique_key, baseline_sol)
+    create_excel_download_button(sol, params, scenario_key, None, unique_key, baseline_sol, api_client, api_available)
+
+
 
 def main():
-    """Main application logic."""
+    """Main Streamlit app."""
+    # Setup UI
     st.title("Enhanced Model Output Explorer")
     
+    # Configuration for API mode (moved to main function)
+    use_api = st.sidebar.checkbox("Use API Mode", value=False, help="Toggle between local and API-based model solving")
+    api_url = st.sidebar.text_input("API Server URL", value="http://localhost:8000", help="URL of the API server")
+    
+    # Initialize API client if needed
+    api_client, api_available = get_api_client(use_api, api_url)
+    
     # Show API status
-    show_api_status()
+    show_api_status(use_api, api_available, api_url)
     
     # Add cache clearing button in sidebar
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🔧 Cache Management")
-    if st.sidebar.button("🗑️ Clear All Caches", help="Clear Streamlit caches to reload models with latest code changes"):
-        try:
-            st.cache_data.clear()
-            st.cache_resource.clear()
-            # Also clear session state caches
-            if 'baseline_solution' in st.session_state:
-                st.session_state['baseline_solution'] = None
-                st.session_state['baseline_params'] = None
-            if 'cf_solution' in st.session_state:
-                st.session_state['cf_solution'] = None
-                st.session_state['cf_params'] = None
-                st.session_state['cf_scenario_key'] = None
-            st.sidebar.success("✅ Caches cleared! Models will be re-solved.")
-            # Use rerun for Streamlit 1.18+
-            if hasattr(st, 'rerun'):
+    try:
+        st.sidebar.subheader("🔧 Cache Management")
+        if st.sidebar.button("🗑️ Clear All Caches", help="Clear Streamlit caches to reload models with latest code changes"):
+            try:
+                st.cache_data.clear()
+                st.cache_resource.clear()
+                # Also clear counterfactual session state
+                if 'cf_solution' in st.session_state:
+                    st.session_state['cf_solution'] = None
+                    st.session_state['cf_params'] = None
+                    st.session_state['cf_scenario_key'] = None
+                    st.session_state['cf_config_hash'] = None
+                st.sidebar.success("✅ Caches cleared! Models will be re-solved.")
+                time.sleep(1)  # Brief pause for user feedback
                 st.rerun()
-            elif hasattr(st, 'experimental_rerun'):
-                st.experimental_rerun()  # type: ignore
-            else:
-                # Fallback for very old versions
-                st.sidebar.info("Please refresh the page manually to see changes")
-        except Exception as e:
-            st.sidebar.error(f"Cache clearing failed: {e}")
-            st.sidebar.info("Please refresh the page manually")
+            except Exception as e:
+                st.sidebar.error(f"Cache clearing failed: {e}")
+    except Exception as e:
+        st.sidebar.error(f"Sidebar setup failed: {e}")
     
-    # Check if system is ready
-    if USE_API and not API_AVAILABLE:
-        st.error("🚫 API mode selected but API server is not available. Please check the server or switch to local mode.")
-        return
-    
-    # Initialize session state for counterfactual solution
-    if 'cf_solution' not in st.session_state:
-        st.session_state['cf_solution'] = None
-        st.session_state['cf_params'] = None
-        st.session_state['cf_scenario_key'] = None
-    
-    # Initialize session state for baseline solution (to avoid re-solving)
-    if 'baseline_solution' not in st.session_state:
-        st.session_state['baseline_solution'] = None
-        st.session_state['baseline_params'] = None
+    # Load baseline model (simple loading, no caching complexity)
+    try:
+        with st.spinner("🔄 Loading baseline model..."):
+            baseline_sol, baseline_params = load_baseline_model()
+        st.success("✅ Baseline model loaded successfully!")
+    except Exception as e:
+        st.error(f"❌ Failed to load baseline model: {e}")
+        st.error("Please run 'python solve_baseline_from_data.py' first to create baseline_model.pkl")
+        st.stop()  # Stop execution if baseline model can't be loaded
 
-    # 🚀 IMMEDIATE BASELINE LOADING: Load baseline model on startup
-    # This ensures the model is ready for immediate use
-    if st.session_state['baseline_solution'] is None:
-        with st.spinner("🔄 Loading baseline model (this may take 15-30 seconds)..."):
-            baseline_sol, baseline_params = solve_benchmark_unified()
-            st.session_state['baseline_solution'] = baseline_sol
-            st.session_state['baseline_params'] = baseline_params
-            if baseline_sol is not None:
-                st.success("✅ Baseline model loaded successfully!")
-            else:
-                st.error("❌ Failed to load baseline model")
-                return
-
-    # Get solutions from session state (they're now guaranteed to be loaded)
-    baseline_sol = st.session_state['baseline_solution']
-    baseline_params = st.session_state['baseline_params']
-    
     # Initialize visualization engine
     country_names, sector_names = get_country_sector_names()
     if country_names and sector_names:
         viz_engine = ModelVisualizationEngine(country_names, sector_names)
     else:
         st.error("Failed to initialize visualization engine")
-        return
+        st.stop()
     
-    # Model selection
-    st.header("Model Selection")
+    # baseline_sol and baseline_params are already loaded above
     
-    # Model type selection
-    st.header("🎯 Select Model Type")
+    # Main UI
+    st.markdown("---")
+    
+    # Model Type Selection
     model_type = st.radio(
-        "Choose which model to explore:",
+        "📈 Select Model Type:",
         ["Baseline Model", "Counterfactual Model"],
-        horizontal=True,
+        index=0,
         help="Baseline uses real-world tariff data, Counterfactual uses custom tariff scenarios"
     )
     
     if model_type == "Baseline Model":
         # Baseline Model Section
         st.header("🏛️ Baseline Model Analysis")
-        st.info("Using real-world tariff data from the dataset")
+        st.write("Analysis of the baseline economic model with real-world tariff data.")
         
-        # Model is already loaded on startup, so we can show results immediately
+        # Store scenario key for downloads
         baseline_scenario_key = "benchmark"
         
         # Show baseline model status
@@ -771,60 +810,89 @@ def main():
             
             # Downloads and Visualization for baseline
             st.markdown("---")
-            st.header("📥 Download Results")
-            show_variable_download_section(baseline_sol, baseline_params, baseline_scenario_key, "baseline")
             
-            # Show baseline visualization  
+            show_variable_download_section(baseline_sol, baseline_params, baseline_scenario_key, "baseline", None, api_client, api_available)
+            
+            # Show baseline visualization
             st.markdown("---")
             st.header("📊 Baseline Model Visualization")
             viz_engine.visualize_single_model(baseline_sol)  # Single model view
             
         else:
             st.error("❌ Baseline model failed to load. Please refresh the page or clear caches.")
-            if st.button("🔄 Refresh Page", key="refresh_page"):
-                st.rerun()
     
     else:
         # Counterfactual Model Section
         st.header("🔧 Counterfactual Model Analysis")
         st.info("Configure custom tariff scenario for analysis")
         
-        # Clear solution button
+        # Initialize session state for counterfactual results (minimal persistence)
+        if 'cf_solution' not in st.session_state:
+            st.session_state['cf_solution'] = None
+            st.session_state['cf_params'] = None
+            st.session_state['cf_scenario_key'] = None
+            st.session_state['cf_config_hash'] = None
+        
+        # Add a clear solution button for starting fresh
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
-            if st.button("Clear Solution & Reconfigure", key="clear_cf_solution"):
+            if st.button("🔄 Clear Solution & Reconfigure", key="clear_cf_solution"):
                 st.session_state['cf_solution'] = None
                 st.session_state['cf_params'] = None
                 st.session_state['cf_scenario_key'] = None
+                st.session_state['cf_config_hash'] = None
                 st.rerun()
         
-        # Status indicator for counterfactual
+        # Show status indicator
         if st.session_state.get('cf_solution', None) is not None:
-            st.success("✅ Counterfactual solution available")
+            st.success("✅ Counterfactual solution available - you can switch between view modes")
         else:
             st.warning("⏳ Configure and solve counterfactual below")
         
         # Counterfactual configuration
         cf_config = create_counterfactual_ui("", "Counterfactual")
-        cf_sol, cf_params, cf_scenario_key = None, None, None
         
+        # Check if configuration has changed (to detect if we need to re-solve)
+        if cf_config and all(x is not None for x in cf_config):
+            import hashlib
+            config_str = str(cf_config)
+            config_hash = hashlib.md5(config_str.encode()).hexdigest()
+            
+            # If configuration changed, clear the old solution
+            if st.session_state.get('cf_config_hash') != config_hash:
+                if st.session_state.get('cf_solution') is not None:
+                    st.warning("⚠️ Configuration changed - previous solution cleared. Please solve again.")
+                    st.session_state['cf_solution'] = None
+                    st.session_state['cf_params'] = None
+                    st.session_state['cf_scenario_key'] = None
+                st.session_state['cf_config_hash'] = config_hash
+        
+        # Solving button and logic
         if all(x is not None for x in cf_config):
-            if st.button("🚀 Solve Counterfactual Model", key="run_cf"):
-                importers, exporters, sectors, tariff_data = cf_config
-                try:
-                    with st.spinner("Solving Counterfactual Model..."):
-                        (cf_sol, cf_params), cf_scenario_key = solve_counterfactual_unified(
-                            importers, exporters, sectors, tariff_data
-                        )
-                        if cf_sol is not None:
-                            st.session_state['cf_solution'] = cf_sol
-                            st.session_state['cf_params'] = cf_params
-                            st.session_state['cf_scenario_key'] = cf_scenario_key
-                            st.success("🎉 Counterfactual analysis completed successfully!")
-                except Exception as e:
-                    st.error(f"❌ Error solving counterfactual: {e}")
+            # Check if we already have a solution for this configuration
+            if st.session_state.get('cf_solution') is None:
+                if st.button("🚀 Solve Counterfactual Model", key="run_cf"):
+                    importers, exporters, sectors, tariff_data = cf_config
+                    try:
+                        with st.spinner("Solving Counterfactual Model..."):
+                            (cf_sol, cf_params), cf_scenario_key = solve_counterfactual_unified(
+                                importers, exporters, sectors, tariff_data, api_client, api_available
+                            )
+                            if cf_sol is not None:
+                                # Store in session state
+                                st.session_state['cf_solution'] = cf_sol
+                                st.session_state['cf_params'] = cf_params
+                                st.session_state['cf_scenario_key'] = cf_scenario_key
+                                st.success("🎉 Counterfactual analysis completed successfully!")
+                                st.rerun()  # Refresh to show results
+                            else:
+                                st.error("❌ Counterfactual solving failed")
+                    except Exception as e:
+                        st.error(f"❌ Error solving counterfactual: {e}")
+            else:
+                st.info("✅ Counterfactual already solved for current configuration. Use 'Clear Solution' to reconfigure.")
         
-        # Get solution from session state if available
+        # Get solutions from session state
         cf_sol = st.session_state.get('cf_solution', None)
         cf_params = st.session_state.get('cf_params', None)
         cf_scenario_key = st.session_state.get('cf_scenario_key', None)
@@ -845,7 +913,7 @@ def main():
             
             if view_mode == "Level Values":
                 st.subheader("📥 Download Counterfactual Level Values")
-                show_variable_download_section(cf_sol, cf_params, cf_scenario_key, "counterfactual_levels")
+                show_variable_download_section(cf_sol, cf_params, cf_scenario_key, "counterfactual_levels", None, api_client, api_available)
                 
                 # Show counterfactual visualization (level values)
                 st.subheader("📊 Counterfactual Model Visualization (Level Values)")
@@ -855,17 +923,14 @@ def main():
                 # Check if baseline model is loaded for comparison
                 if baseline_sol is not None:
                     st.subheader("📥 Download Percentage Changes (Baseline → Counterfactual)")
-                    show_variable_download_section(cf_sol, cf_params, cf_scenario_key, "counterfactual_changes", baseline_sol)
+                    show_variable_download_section(cf_sol, cf_params, cf_scenario_key, "counterfactual_changes", baseline_sol, api_client, api_available)
                     
                     # Show percentage change visualization  
                     st.subheader("📊 Percentage Change Visualization (Baseline → Counterfactual)")
                     viz_engine.visualize_comparison(baseline_sol, cf_sol)
                 else:
                     st.warning("⚠️ Baseline model needed for percentage change comparison")
-                    st.info("💡 The baseline model was loaded on startup, but there may have been an error. Try refreshing the page.")
-                    
-                    if st.button("🔄 Refresh Page", key="refresh_for_baseline"):
-                        st.rerun()
+                    st.info("💡 The baseline model should be loaded automatically. If you see this message, there may have been an error.")
         elif all(x is not None for x in cf_config if cf_config):
             st.info("👆 Click 'Solve Counterfactual Model' to run the analysis and view results.")
         else:

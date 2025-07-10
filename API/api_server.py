@@ -73,7 +73,7 @@ class CounterfactualRequest(BaseModel):
     importers: List[str]
     exporters: List[str]
     sectors: List[str]
-    tariff_data: dict  # Fixed: Changed from tariff_rate: float to tariff_data: dict
+    tariff_data: dict  # Unified format: {(importer, exporter, sector): rate} for all modes
 
 class ModelMetadata(BaseModel):
     countries: List[str]

@@ -15,6 +15,37 @@ This separation allows for:
 - Excel download functionality for all model variables
 - Both local and remote operation modes
 
+## Simplified Tariff Configuration
+
+**NEW**: The system now uses a unified tariff data structure across all 4 tariff modes for simplified processing:
+
+### Unified Data Format
+All tariff modes now produce the same data structure:
+```python
+tariff_data = {
+    (importer, exporter, sector): rate,
+    # Example:
+    ("USA", "CHN", "Agriculture"): 25.0,
+    ("USA", "CHN", "Manufacturing"): 25.0,
+    ("USA", "DEU", "Agriculture"): 15.0,
+    # ...
+}
+```
+
+### Tariff Modes
+1. **Uniform Rate**: Same rate applied to all (importer, exporter, sector) combinations
+2. **Custom Rates by Country**: Different rates per country pair, applied to all sectors  
+3. **Custom Rates by Sector**: Different rates per sector, applied to all country pairs
+4. **Custom Rates by Country-Sector**: Individual rates for specific combinations
+
+All modes expand to the unified `{(importer, exporter, sector): rate}` format before backend processing.
+
+### Benefits
+- **Simplified Backend**: Single lookup logic instead of 4 different cases
+- **Easier Testing**: One data format to test and debug
+- **Better Maintainability**: Cleaner, more predictable code structure
+- **Future Extensibility**: Easy to add new tariff policy types
+
 ## Quick Start
 
 ### 1. Install Dependencies

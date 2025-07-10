@@ -133,10 +133,8 @@ class CounterfactualModelSolver:
             importers: List of importing country names
             exporters: List of exporting country names  
             sectors: List of sector names affected
-            tariff_data: Dict mapping either:
-                - (importer, exporter) pairs to tariff rates (for country-based)
-                - (importer, exporter, sector) triplets to tariff rates (for country-sector-based)
-                - (importer, sector) pairs to tariff rates (for simple sector-based)
+            tariff_data: Dict mapping (importer, exporter, sector) triplets to tariff rates
+                        All tariff modes now use this unified format for simplicity.
         
         Returns:
             ModelSol: Solution of the counterfactual model
@@ -144,17 +142,15 @@ class CounterfactualModelSolver:
         # Create modified tariff matrix
         tilde_tau_1 = self.benchmark_params.tilde_tau.copy()
         
-        # Determine tariff data format based on key structure
-        sample_key = next(iter(tariff_data.keys())) if tariff_data else None
-        if sample_key is None:
+        # Check if there are any tariff changes
+        if not tariff_data:
             # No tariff changes, solve with original parameters
             cf_model = Model(self.benchmark_params)
             cf_solver = ModelSolver(cf_model)
             cf_solver.solve()
             return cf_model.sol
-            
-        key_length = len(sample_key)
         
+        # Apply tariff changes using unified format: {(importer, exporter, sector): rate}
         for importer in importers:
             for exporter in exporters:
                 for sector in sectors:
@@ -163,19 +159,8 @@ class CounterfactualModelSolver:
                     s = self.sector_names.index(sector)
                     
                     if i != j:  # Don't modify domestic trade
-                        if key_length == 3:
-                            # Country-sector-based: (importer, exporter, sector) → rate
-                            tariff_rate = tariff_data.get((importer, exporter, sector), 0)
-                        elif key_length == 2:
-                            # Check if it's (importer, exporter) or (importer, sector)
-                            if (importer, exporter) in tariff_data:
-                                # Country-based: (importer, exporter) → rate (applied to all sectors)
-                                tariff_rate = tariff_data.get((importer, exporter), 0)
-                            else:
-                                # Simple sector-based: (importer, sector) → rate (applied to all exporters)
-                                tariff_rate = tariff_data.get((importer, sector), 0)
-                        else:
-                            tariff_rate = 0
+                        # Simple unified lookup - all modes use (importer, exporter, sector) format
+                        tariff_rate = tariff_data.get((importer, exporter, sector), 0.0)
                         
                         tilde_tau_1[i, j, s] = (
                             self.benchmark_params.tilde_tau[i, j, s] + (tariff_rate / 100.0)
@@ -308,36 +293,27 @@ def get_model_pipeline() -> ModelPipeline:
     """Get cached model pipeline instance."""
     return ModelPipeline()
 
-
-@st.cache_data
-def solve_benchmark_cached() -> Tuple[ModelSol, ModelParams]:
-    """Cached function to solve benchmark model."""
-    pipeline = get_model_pipeline()
-    return pipeline.ensure_benchmark_solved()
-
-
-@st.cache_data
 def get_metadata_cached() -> Tuple[List[str], List[str], int, int]:
-    """Cached function to get model metadata without solving."""
-    # Load just the parameters to get metadata
-    from pathlib import Path
-    data_paths = [
-        "data.npz",
-        "../data.npz", 
-        "Furusawa2023/data.npz"
-    ]
-    data_file = None
-    for path in data_paths:
-        if Path(path).exists():
-            data_file = path
-            break
-    
-    if data_file is None:
-        raise FileNotFoundError("Could not find data.npz file")
-    
-    from models import ModelParams
-    params = ModelParams.load_from_npz(data_file)
-    return list(params.country_list), list(params.sector_list), params.N, params.S
+    """Get model metadata without solving - now loads from pickle baseline model."""
+    # Try to get metadata from existing baseline model pickle
+    try:
+        from models import Model
+        model = Model.load_from_pickle("baseline_model.pkl")
+        country_names = list(model.params.country_list)
+        sector_names = list(model.params.sector_list)
+        return country_names, sector_names, len(country_names), len(sector_names)
+    except Exception:
+        # Fallback to direct data loading if pickle doesn't exist
+        from models import ModelParams
+        from pathlib import Path
+        
+        data_paths = ["data.npz", "../data.npz", "Furusawa2023/data.npz"]
+        for path in data_paths:
+            if Path(path).exists():
+                params = ModelParams.load_from_npz(path)
+                return list(params.country_list), list(params.sector_list), params.N, params.S
+        
+        raise FileNotFoundError("Could not find data.npz or baseline_model.pkl")
 
 
 @st.cache_data  

@@ -19,7 +19,31 @@ from typing import Dict, List, Optional, Union, Tuple
 from models import ModelSol, ModelParams
 import pandas as pd
 from io import BytesIO
+import hashlib
+from plotly.subplots import make_subplots
 
+@st.cache_data
+def calculate_percentage_change(baseline_data: np.ndarray, cf_data: np.ndarray) -> np.ndarray:
+    """
+    Calculate percentage change with caching to avoid redundant calculations.
+    
+    Args:
+        baseline_data: Baseline model data
+        cf_data: Counterfactual model data
+        
+    Returns:
+        Percentage change array
+    """
+    with np.errstate(divide='ignore', invalid='ignore'):
+        percentage_change = ((cf_data - baseline_data) / baseline_data) * 100
+        # Handle division by zero cases
+        percentage_change = np.where(np.isfinite(percentage_change), percentage_change, 0)
+    return percentage_change
+
+@st.cache_data  
+def generate_data_hash(data: np.ndarray) -> str:
+    """Generate a hash for data arrays to enable efficient caching."""
+    return hashlib.md5(data.tobytes()).hexdigest()
 
 class VisualizationDataProcessor:
     """Processes model solution data for visualization."""
@@ -37,10 +61,6 @@ class VisualizationDataProcessor:
             [c for c in self.priority_countries if c in country_names] + 
             [c for c in country_names if c not in self.priority_countries]
         )
-    
-    def calculate_percentage_change(self, val1: np.ndarray, val2: np.ndarray) -> np.ndarray:
-        """Calculate percentage change from val1 to val2."""
-        return 100 * (val2 - val1) / (np.abs(val1) + 1e-8)
     
     def get_variable_description(self, variable_name: str) -> str:
         """Get description for a variable."""
@@ -74,6 +94,23 @@ class VisualizationUI:
     
     def __init__(self, data_processor: VisualizationDataProcessor):
         self.data_processor = data_processor
+        # Initialize persistent selection state
+        self._initialize_persistent_state()
+    
+    def _initialize_persistent_state(self):
+        """Initialize persistent selection state that survives variable changes."""
+        if "viz_selected_countries" not in st.session_state:
+            st.session_state["viz_selected_countries"] = []
+        if "viz_selected_sectors" not in st.session_state:
+            st.session_state["viz_selected_sectors"] = self.data_processor.sector_names.copy()
+        if "viz_selected_importers" not in st.session_state:
+            st.session_state["viz_selected_importers"] = []
+        if "viz_selected_exporters" not in st.session_state:
+            st.session_state["viz_selected_exporters"] = []
+        if "viz_fig_width" not in st.session_state:
+            st.session_state["viz_fig_width"] = 1600
+        if "viz_fig_height" not in st.session_state:
+            st.session_state["viz_fig_height"] = 700
     
     def create_multiselect_with_buttons(self, 
                                       label: str, 
@@ -87,29 +124,80 @@ class VisualizationUI:
         with cols[0]:
             if st.button(f"Select ALL {label}", key=all_button_key):
                 st.session_state[key] = options.copy()
+                st.rerun()
         with cols[1]:
             if st.button(f"Remove ALL {label}", key=clear_button_key):
                 st.session_state[key] = []
+                st.rerun()
         
-        return st.multiselect(label, options, default=default, key=key)
+        return st.multiselect(label, options, default=st.session_state.get(key, default), key=key)
     
+    def create_stable_country_selector(self, label: str = "Countries") -> List[str]:
+        """Create country selector with stable keys that persist across variable changes."""
+        return self.create_multiselect_with_buttons(
+            label, 
+            self.data_processor.country_names_sorted, 
+            st.session_state["viz_selected_countries"],
+            "viz_selected_countries",
+            "viz_select_all_countries",
+            "viz_clear_all_countries"
+        )
+    
+    def create_stable_sector_selector(self, label: str = "Sectors") -> List[str]:
+        """Create sector selector with stable keys that persist across variable changes."""
+        return self.create_multiselect_with_buttons(
+            label,
+            self.data_processor.sector_names,
+            st.session_state["viz_selected_sectors"],
+            "viz_selected_sectors", 
+            "viz_select_all_sectors",
+            "viz_clear_all_sectors"
+        )
+    
+    def create_stable_importer_selector(self) -> List[str]:
+        """Create importer selector with stable keys."""
+        return self.create_multiselect_with_buttons(
+            "Importer Countries",
+            self.data_processor.country_names_sorted,
+            st.session_state["viz_selected_importers"],
+            "viz_selected_importers",
+            "viz_select_all_importers", 
+            "viz_clear_all_importers"
+        )
+    
+    def create_stable_exporter_selector(self) -> List[str]:
+        """Create exporter selector with stable keys."""
+        return self.create_multiselect_with_buttons(
+            "Exporter Countries",
+            self.data_processor.country_names_sorted,
+            st.session_state["viz_selected_exporters"],
+            "viz_selected_exporters",
+            "viz_select_all_exporters",
+            "viz_clear_all_exporters"
+        )
+
     def create_figure_size_controls(self) -> Tuple[int, int]:
-        """Create figure size control sliders."""
+        """Create figure size control sliders with persistent state."""
         st.markdown("### Figure Size Adjustment")
         fig_width = st.slider(
             "Figure Width", 
             min_value=400, max_value=2000, 
-            value=st.session_state.get("fig_width", 1600), 
-            step=100
+            value=st.session_state["viz_fig_width"], 
+            step=100,
+            key="viz_fig_width_slider"
         )
         fig_height = st.slider(
             "Figure Height", 
             min_value=300, max_value=1000, 
-            value=st.session_state.get("fig_height", 700), 
-            step=50
+            value=st.session_state["viz_fig_height"], 
+            step=50,
+            key="viz_fig_height_slider"
         )
-        st.session_state["fig_width"] = fig_width
-        st.session_state["fig_height"] = fig_height
+        
+        # Update session state
+        st.session_state["viz_fig_width"] = fig_width
+        st.session_state["viz_fig_height"] = fig_height
+        
         return fig_width, fig_height
 
 
@@ -222,7 +310,7 @@ class PlotlyVisualizer:
                              fig_width: int, 
                              fig_height: int,
                              is_percentage_change: bool = False):
-        """Visualize 3D variables (importer-exporter-sector level)."""
+        """Visualize 3D variables efficiently using subplot grid instead of separate plots."""
         selected_importers_in_order = [c for c in self.data_processor.country_names if c in selected_importers]
         selected_exporters_in_order = [c for c in self.data_processor.country_names if c in selected_exporters]
         
@@ -231,23 +319,97 @@ class PlotlyVisualizer:
         else:
             y_label = f"{variable_name} (% Change)" if variable_name.endswith("_hat") else variable_name
         
+        num_importers = len(selected_importers_in_order)
+        num_exporters = len(selected_exporters_in_order)
+        
+        # Limit subplot grid size for performance
+        max_plots = 16  # 4x4 grid maximum
+        total_combinations = num_importers * num_exporters
+        
+        if total_combinations > max_plots:
+            st.warning(f"⚠️ Too many combinations ({total_combinations}). Showing only first {max_plots} combinations for performance. Consider selecting fewer countries.")
+            # Limit to first few combinations
+            combinations_limit = int(np.sqrt(max_plots))
+            selected_importers_in_order = selected_importers_in_order[:combinations_limit]
+            selected_exporters_in_order = selected_exporters_in_order[:combinations_limit]
+            num_importers = len(selected_importers_in_order)
+            num_exporters = len(selected_exporters_in_order)
+            total_combinations = num_importers * num_exporters
+        
+        # Calculate optimal subplot layout
+        if total_combinations <= 4:
+            rows, cols = 2, 2
+        elif total_combinations <= 9:
+            rows, cols = 3, 3
+        else:
+            rows = cols = int(np.ceil(np.sqrt(total_combinations)))
+        
+        # Create subplot grid
+        subplot_titles = []
         for importer in selected_importers_in_order:
             for exporter in selected_exporters_in_order:
+                subplot_titles.append(f"{importer}→{exporter}")
+        
+        # Pad titles if needed
+        while len(subplot_titles) < rows * cols:
+            subplot_titles.append("")
+        
+        fig = make_subplots(
+            rows=rows, cols=cols,
+            subplot_titles=subplot_titles[:rows * cols],
+            vertical_spacing=0.15,
+            horizontal_spacing=0.1
+        )
+        
+        plot_idx = 0
+        for importer in selected_importers_in_order:
+            for exporter in selected_exporters_in_order:
+                if plot_idx >= rows * cols:
+                    break
+                    
                 i_idx = self.data_processor.country_names.index(importer)
                 e_idx = self.data_processor.country_names.index(exporter)
-                bars = []
-                labels = []
+                
+                # Prepare data for this importer-exporter pair
+                y_values = []
+                x_labels = []
                 for sector in selected_sectors:
                     s_idx = self.data_processor.sector_names.index(sector)
-                    bars.append(value[i_idx, e_idx, s_idx])
-                    labels.append(sector)
+                    y_values.append(value[i_idx, e_idx, s_idx])
+                    x_labels.append(sector)
                 
-                fig = self.create_bar_chart(
-                    labels, bars, 
-                    f"{importer} (Importer) — {exporter} (Exporter): Selected Sectors",
-                    "Sector", y_label, fig_width, fig_height
+                # Calculate subplot position
+                row = (plot_idx // cols) + 1
+                col = (plot_idx % cols) + 1
+                
+                # Add bar trace to subplot
+                fig.add_trace(
+                    go.Bar(
+                        x=x_labels,
+                        y=y_values,
+                        name=f"{importer}→{exporter}",
+                        showlegend=False,
+                        hovertemplate=f"<b>{importer}→{exporter}</b><br>Sector: %{{x}}<br>{y_label}: %{{y:.6f}}<extra></extra>"
+                    ),
+                    row=row, col=col
                 )
-                st.plotly_chart(fig, use_container_width=False)
+                
+                plot_idx += 1
+        
+        # Update layout for better appearance
+        fig.update_layout(
+            height=max(600, rows * 200),  # Dynamic height based on rows
+            width=fig_width,
+            title_text=f"{variable_name}: Trade Relationships by Sector",
+            title_x=0.5,
+            showlegend=False
+        )
+        
+        # Update x-axes to show sector labels at angle for readability
+        fig.update_xaxes(tickangle=-45, tickfont_size=10)
+        fig.update_yaxes(title_text=y_label, tickfont_size=10)
+        
+        st.plotly_chart(fig, use_container_width=False)
 
 
 class ModelVisualizationEngine:
@@ -296,7 +458,7 @@ class ModelVisualizationEngine:
             val2 = sol2_dict[variable]
             
             # Calculate percentage change for ALL variables
-            value = self.data_processor.calculate_percentage_change(val1, val2)
+            value = calculate_percentage_change(val1, val2)
             st.write(f"Variable shape: {np.shape(value)} (showing % change from Baseline to Counterfactual)")
             
             self._visualize_variable(value, variable, is_percentage_change=True)
@@ -343,22 +505,15 @@ class ModelVisualizationEngine:
     def _visualize_1d_variable(self, value: np.ndarray, variable_name: str, is_percentage_change: bool = False):
         """Handle 1D variable visualization with UI controls."""
         if value.shape[0] == len(self.data_processor.country_names):
-            names = self.data_processor.country_names_sorted
-            label = "Countries"
-            key_prefix = "country"
-            default_list = []
+            # Country-level data - use stable country selector
+            selected_items = self.ui.create_stable_country_selector()
+            names = self.data_processor.country_names
+            label_type = "Countries"
         else:
+            # Sector-level data - use stable sector selector  
+            selected_items = self.ui.create_stable_sector_selector()
             names = self.data_processor.sector_names
-            label = "Sectors"
-            key_prefix = "sector"
-            default_list = names
-
-        selected_items = self.ui.create_multiselect_with_buttons(
-            label, names, default_list, 
-            f"{key_prefix}_multiselect_{variable_name}",
-            f"select_all_{key_prefix}_{variable_name}",
-            f"remove_all_{key_prefix}_{variable_name}"
-        )
+            label_type = "Sectors"
 
         fig_width, fig_height = self.ui.create_figure_size_controls()
         
@@ -367,19 +522,13 @@ class ModelVisualizationEngine:
                 value, variable_name, selected_items, fig_width, fig_height, is_percentage_change
             )
         else:
-            st.info(f"No {label.lower()} selected.")
+            st.info(f"No {label_type.lower()} selected.")
     
     def _visualize_2d_variable(self, value: np.ndarray, variable_name: str, is_percentage_change: bool = False):
         """Handle 2D variable visualization with UI controls."""
-        selected_countries = self.ui.create_multiselect_with_buttons(
-            "Countries", self.data_processor.country_names_sorted, [],
-            f"country_multiselect_{variable_name}", f"select_all_countries_{variable_name}", f"remove_all_countries_{variable_name}"
-        )
+        selected_countries = self.ui.create_stable_country_selector()
         
-        selected_sectors = self.ui.create_multiselect_with_buttons(
-            "Sectors", self.data_processor.sector_names, self.data_processor.sector_names,
-            f"sector_multiselect_{variable_name}", f"select_all_sectors_{variable_name}", f"remove_all_sectors_{variable_name}"
-        )
+        selected_sectors = self.ui.create_stable_sector_selector()
         
         if selected_countries and selected_sectors:
             fig_width, fig_height = self.ui.create_figure_size_controls()
@@ -391,20 +540,11 @@ class ModelVisualizationEngine:
     
     def _visualize_3d_variable(self, value: np.ndarray, variable_name: str, is_percentage_change: bool = False):
         """Handle 3D variable visualization with UI controls."""
-        selected_importers = self.ui.create_multiselect_with_buttons(
-            "Importer Countries", self.data_processor.country_names_sorted, [],
-            f"importer_multiselect_{variable_name}", f"select_all_importers_{variable_name}", f"remove_all_importers_{variable_name}"
-        )
+        selected_importers = self.ui.create_stable_importer_selector()
         
-        selected_exporters = self.ui.create_multiselect_with_buttons(
-            "Exporter Countries", self.data_processor.country_names_sorted, [],
-            f"exporter_multiselect_{variable_name}", f"select_all_exporters_{variable_name}", f"remove_all_exporters_{variable_name}"
-        )
+        selected_exporters = self.ui.create_stable_exporter_selector()
         
-        selected_sectors = self.ui.create_multiselect_with_buttons(
-            "Sectors", self.data_processor.sector_names, self.data_processor.sector_names,
-            f"sector_multiselect_3d_{variable_name}", f"select_all_sectors_3d_{variable_name}", f"remove_all_sectors_3d_{variable_name}"
-        )
+        selected_sectors = self.ui.create_stable_sector_selector()
         
         if selected_importers and selected_exporters and selected_sectors:
             fig_width, fig_height = self.ui.create_figure_size_controls()
