@@ -56,15 +56,26 @@ sys.path.append(str(Path(__file__).parent.parent))
 # model_pipeline is now in the same directory
 from model_pipeline import (
     get_model_pipeline,
-    solve_benchmark_cached,
-    solve_counterfactual_cached
+    solve_counterfactual_cached,
+    get_metadata_cached
 )
 from models import ModelSol, ModelParams
 from visualization import ModelVisualizationEngine
+import pickle
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def load_baseline_model_api(pickle_path: str = "baseline_model.pkl") -> tuple[ModelSol, ModelParams]:
+    """Load baseline model from pickle file for API server."""
+    try:
+        with open(pickle_path, 'rb') as f:
+            model = pickle.load(f)
+        return model.sol, model.params
+    except FileNotFoundError:
+        logger.error(f"Baseline model file '{pickle_path}' not found.")
+        raise HTTPException(status_code=500, detail=f"Baseline model file '{pickle_path}' not found")
 
 app = FastAPI(title="Economic Model API", version="1.0.0")
 
@@ -99,7 +110,7 @@ def root():
 def get_model_metadata():
     """Get basic model metadata (countries, sectors, dimensions)."""
     try:
-        _, params = solve_benchmark_cached()
+        _, params = load_baseline_model_api()
         
         return ModelMetadata(
             countries=list(params.country_list),
@@ -113,9 +124,9 @@ def get_model_metadata():
 
 @app.get("/benchmark/solve")
 def solve_benchmark():
-    """Solve the benchmark model and return summary."""
+    """Load the benchmark model and return summary."""
     try:
-        sol, params = solve_benchmark_cached()
+        sol, params = load_baseline_model_api()
         
         # Store in cache with a special key for benchmark
         cache_key = "benchmark"
@@ -128,19 +139,23 @@ def solve_benchmark():
         
         return {
             "scenario_key": cache_key,
-            "status": "solved",
+            "status": "loaded",
             "solved_at": _solved_models_cache[cache_key]["solved_at"],
-            "message": "Benchmark model solved successfully"
+            "message": "Benchmark model loaded successfully"
         }
     except Exception as e:
-        logger.error(f"Error solving benchmark: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to solve benchmark model: {str(e)}")
+        logger.error(f"Error loading benchmark: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to load benchmark model: {str(e)}")
 
 @app.post("/counterfactual/solve")
 def solve_counterfactual(request: CounterfactualRequest):
     """Solve a counterfactual model and return summary."""
     try:
+        # Load baseline parameters for counterfactual solving
+        _, baseline_params = load_baseline_model_api()
+        
         pipeline = get_model_pipeline()
+        pipeline.initialize_with_baseline_params(baseline_params)
         
         # Solve the counterfactual
         scenario_key = pipeline.solve_counterfactual(

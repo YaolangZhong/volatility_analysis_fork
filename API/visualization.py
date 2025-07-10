@@ -207,6 +207,21 @@ class PlotlyVisualizer:
     def __init__(self, data_processor: VisualizationDataProcessor):
         self.data_processor = data_processor
     
+    @st.cache_data
+    def _prepare_1d_plot_data(_self, value: np.ndarray, names: List[str], 
+                             selected_items: List[str]) -> Tuple[List[str], List[float]]:
+        """Pre-compute and cache 1D plot data preparation."""
+        selected_items_in_order = [name for name in names if name in selected_items]
+        
+        bars = []
+        labels = []
+        for name in selected_items_in_order:
+            idx = names.index(name)
+            bars.append(value[idx])
+            labels.append(name)
+        
+        return labels, bars
+    
     def create_bar_chart(self, 
                         x_data: List[str], 
                         y_data: List[float], 
@@ -239,30 +254,24 @@ class PlotlyVisualizer:
                              fig_width: int, 
                              fig_height: int,
                              is_percentage_change: bool = False):
-        """Visualize 1D variables (country or sector level)."""
+        """Visualize 1D variables with optimized data preparation."""
+        
         if value.shape[0] == len(self.data_processor.country_names):
-            # Country-level data
             names = self.data_processor.country_names
             label_type = "Countries"
-            selected_items_in_order = [c for c in names if c in selected_items]
         else:
-            # Sector-level data
             names = self.data_processor.sector_names
-            label_type = "Sectors"  
-            selected_items_in_order = selected_items.copy()
+            label_type = "Sectors"
         
-        bars = []
-        labels = []
-        for name in selected_items_in_order:
-            idx = names.index(name)
-            bars.append(value[idx])
-            labels.append(name)
+        # NEW: Use cached data preparation
+        labels, bars = self._prepare_1d_plot_data(value, names, selected_items)
         
         if bars:
             if is_percentage_change:
                 y_label = f"{variable_name} (% Change)"
             else:
                 y_label = f"{variable_name} (% Change)" if variable_name.endswith("_hat") else variable_name
+            
             fig = self.create_bar_chart(
                 labels, bars, "Selected Values", label_type, y_label, fig_width, fig_height
             )
@@ -419,6 +428,36 @@ class ModelVisualizationEngine:
         self.data_processor = VisualizationDataProcessor(country_names, sector_names)
         self.ui = VisualizationUI(self.data_processor)
         self.visualizer = PlotlyVisualizer(self.data_processor)
+        
+        # ADD NEW: Caching infrastructure
+        self._cached_single_model_data = {}
+        self._cached_percentage_data = {}
+        self._cached_sol_hashes = {}
+    
+    def _get_solution_hash(self, solution) -> str:
+        """Generate a unique hash for a solution to enable caching."""
+        solution_str = str(solution.__dict__)
+        return hashlib.md5(solution_str.encode()).hexdigest()[:16]
+    
+    @st.cache_data
+    def _precompute_single_model_data(_self, solution_hash: str, sol_dict: dict) -> dict:
+        """Pre-extract and cache all variable data from a single model solution."""
+        return {var_name: var_value for var_name, var_value in sol_dict.items()
+                if isinstance(var_value, np.ndarray)}
+    
+    @st.cache_data 
+    def _precompute_percentage_changes(_self, baseline_hash: str, cf_hash: str, 
+                                     baseline_dict: dict, cf_dict: dict) -> dict:
+        """Pre-compute percentage changes for ALL variables between two models."""
+        variable_keys = set(baseline_dict.keys()) & set(cf_dict.keys())
+        percentage_data = {}
+        
+        for var_name in variable_keys:
+            if isinstance(baseline_dict[var_name], np.ndarray) and isinstance(cf_dict[var_name], np.ndarray):
+                percentage_data[var_name] = calculate_percentage_change(
+                    baseline_dict[var_name], cf_dict[var_name]
+                )
+        return percentage_data
     
     def display_variable_description(self, variable_name: str):
         """Display variable description if available."""
@@ -427,16 +466,27 @@ class ModelVisualizationEngine:
             st.markdown(description, unsafe_allow_html=True)
     
     def visualize_single_model(self, solution: ModelSol):
-        """Visualize results from a single model."""
+        """Visualize results from a single model with optimized data caching."""
         st.header("Variables and Visualization")
         
-        # Get available variables
-        sol_dict = solution.__dict__
-        variable = st.selectbox("Choose an output variable", list(sol_dict.keys()))
+        # NEW: Use cached data extraction
+        sol_hash = self._get_solution_hash(solution)
+        if sol_hash not in self._cached_single_model_data:
+            self._cached_single_model_data[sol_hash] = self._precompute_single_model_data(
+                sol_hash, solution.__dict__
+            )
+        
+        cached_data = self._cached_single_model_data[sol_hash]
+        variable_keys = list(cached_data.keys())
+        
+        # Variable selection
+        variable = st.selectbox("Choose an output variable", variable_keys)
         
         if variable:
             self.display_variable_description(variable)
-            value = sol_dict[variable]
+            
+            # NEW: Direct lookup instead of attribute access
+            value = cached_data[variable]
             st.write(f"Variable shape: {np.shape(value)}")
             
             self._visualize_variable(value, variable)
@@ -445,20 +495,28 @@ class ModelVisualizationEngine:
         """Visualize comparison between two models."""
         st.header("Variables and Visualization")
         
-        # Get common variables
-        sol1_dict = sol1.__dict__
-        sol2_dict = sol2.__dict__
-        variable_keys = list(set(sol1_dict.keys()) & set(sol2_dict.keys()))
+        # NEW: Use pre-computed percentage changes instead of on-demand calculation
+        baseline_hash = self._get_solution_hash(sol1)  
+        cf_hash = self._get_solution_hash(sol2)
+        
+        # Get pre-computed percentage data (cached)
+        cache_key = f"{baseline_hash}_{cf_hash}"
+        if cache_key not in self._cached_percentage_data:
+            self._cached_percentage_data[cache_key] = self._precompute_percentage_changes(
+                baseline_hash, cf_hash, sol1.__dict__, sol2.__dict__
+            )
+        
+        percentage_data = self._cached_percentage_data[cache_key]
+        variable_keys = list(percentage_data.keys())
+        
+        # Variable selection (same as before)
         variable = st.selectbox("Choose an output variable", variable_keys)
         
         if variable:
             self.display_variable_description(variable)
             
-            val1 = sol1_dict[variable]
-            val2 = sol2_dict[variable]
-            
-            # Calculate percentage change for ALL variables
-            value = calculate_percentage_change(val1, val2)
+            # NEW: Direct lookup instead of calculation
+            value = percentage_data[variable]
             st.write(f"Variable shape: {np.shape(value)} (showing % change from Baseline to Counterfactual)")
             
             self._visualize_variable(value, variable, is_percentage_change=True)
