@@ -1,218 +1,201 @@
-# Volatility Analysis
-This project analyzes how economic variables ((real/nominal) wages, price indices, expenditures,...) react to exogenous productivity shocks and trade cost shocks. The model is an extended version of Caliendo and Parro (2015), which includes (i) distinction of final goods and intermediate inputs (they have different transportation costs), (ii) analysis of both productivity shocks and trade cost shocks.
+# 📋 Project Structure
 
-![Structure Image](./figures_readme/structure.svg)
+This project implements a comprehensive economic analysis framework organized into four main components:
 
-## Core Architecture
+### 1. Mathematical Model
+The foundation is a multi-country, multi-sector general equilibrium trade model based on Caliendo and Parro (2015), with key extensions including separate treatment of final goods and intermediate inputs. The model analyzes how economic variables respond to tariff policy.
 
-### models.py - Model Data Management
-This file defines three main dataclasses for organizing all model variables with comprehensive validation and I/O capabilities:
+#### Model Parameter Variables
 
-#### ModelParams
-Stores all structural parameters of the trade model:
-- **Dimensions**: `N` (countries), `S` (sectors) 
-- **Preference parameters**: `alpha` (final consumption shares)
-- **Technology parameters**: `beta` (value-added shares), `gamma` (intermediate input shares), `theta` (trade elasticities)
-- **Trade data**: `pif`, `pim`, `pi` (trade shares), `tilde_tau` (trade costs)
-- **Expenditure data**: `Xf`, `Xm`, `X` (final, intermediate, total expenditures)
-- **Economic aggregates**: `V` (value added), `D` (trade deficits)
-- **Identifiers**: `country_list`, `sector_list`
+The model uses calibrated parameters from input-output tables and trade data to represent the structure of the global economy. These parameters capture key economic relationships including production technologies, consumption patterns, and trade linkages.
 
-**Key Methods**:
-- `check_consistency()`: Validates economic constraints (shares sum to 1, non-negativity, etc.)
-- `save_to_npz()` / `load_from_npz()`: Persistent storage in NumPy format
-- `unpack()`: Returns all parameters as tuple for easy unpacking
+**Usage Parameters:**
+- **`N`** (scalar): Number of countries 
+- **`S`** (scalar): Number of sectors 
+- **`country_list`**: (N) List of country names
+- **`sector_list`**: (S) List of sector names
 
-#### ModelShocks  
-Stores exogenous shocks in "hat algebra" (multiplicative changes from baseline):
-- `lambda_hat`: Productivity shocks (N×S)
-- `df_hat`: Final goods trade cost shocks (N×N×S) 
-- `dm_hat`: Intermediate goods trade cost shocks (N×N×S)
-- `tilde_tau_hat`: Tariff shocks (N×N×S)
+**Structural Parameters:**
+- **`alpha[n,s]`** (N×S): Share of sector s in country n's final consumption expenditure
+- **`beta[n,s]`** (N×S): Share of value added (labor) in total production costs for sector s in country n
+- **`gamma[n,j,k]`** (N×S×S): Share of sector k inputs used in sector j production in country n
+- **`theta[s]`** (S): Trade elasticity parameter for sector s (governs substitution between sources)
 
-**Key Methods**:
-- `check_consistency()`: Validates shock constraints (positivity, diagonal elements = 1)
-- `is_baseline()`: Checks if all shocks equal 1 (no change)
-- `reset_to_baseline()`: Sets all shocks to baseline values
-- `save_to_npz()` / `load_from_npz()`: Persistent storage
+- **`pif[n,i,s]`** (N×N×S): Final goods trade share - fraction of country n's final demand in sector s sourced from country i
+- **`pim[n,i,s]`** (N×N×S): Intermediate goods trade share - fraction of country n's intermediate demand in sector s sourced from country i  
+- **`pi[n,i,s]`** (N×N×S): Total trade share combining final and intermediate goods flows
+- **`tilde_tau[n,i,s]`** (N×N×S): Iceberg trade costs from country i to country n in sector s (≥1, with diagonal = 1)
 
-#### ModelSol
-Stores equilibrium solution variables:
-- **Price changes**: `w_hat` (wages), `c_hat` (unit costs), `Pf_hat`, `Pm_hat` (price indices)
-- **Trade changes**: `pif_hat`, `pim_hat` (trade share changes)
-- **Expenditure outcomes**: `Xf_prime`, `Xm_prime`, `X_prime` (new expenditure levels)
-- **Welfare measures**: `p_index` (consumer price index), `real_w` (real wages)
-- **Trade balances**: `D_prime` (new trade deficits)
-- **Production values**: `Xf_prod_prime`, `Xm_prod_prime`, `X_prod_prime`
+- **`Xf[n,s]`** (N×S): Final goods expenditure in sector s by country n
+- **`Xm[n,s]`** (N×S): Intermediate goods expenditure in sector s by country n
+- **`X[n,s]`** (N×S): Total expenditure in sector s by country n (Xf + Xm)
+- **`V[n]`** (N): Total value added (wage bill) in country n
+- **`D[n]`** (N): Trade deficit in country n (imports - exports)
 
-**Key Methods**:
-- `save_to_npz()` / `load_from_npz()`: Persistent storage
-- `unpack()`: Returns all solution variables as tuple
+#### Policy Shock Variables (Hat Algebra)
 
-#### Model
-Main orchestrating class that combines parameters, shocks, and solutions:
-- **Properties**: `N`, `S` for easy access to dimensions
-- **State management**: `is_optimized` flag, `validate_compatibility()`
-- **Initialization**: `reset_shocks()`, `reset_sols()` 
-- **Documentation**: `summary()`, variable registry integration
-- **I/O**: `from_npz()` class method for loading complete models
+Policy experiments are represented as multiplicative shocks relative to baseline equilibrium. All shock variables use "hat" notation where X_hat = X_new / X_baseline.
 
-#### ModelRegistry System
-Comprehensive documentation system for all 33 model variables:
-- **VarInfo**: Named tuple with variable metadata (name, shape, meaning, indexing, component)
-- **MODEL_VARIABLES**: Complete registry of all model variables
-- **ModelRegistry**: Static methods for variable lookup, validation, and documentation
-- **Utilities**: `print_variable_summary()`, `validate_variable_shape()`, `get_variables_by_dimension()`
+**Productivity Shocks:**
+- **`lambda_hat[n,s]`** (N×S): Productivity shock in sector s of country n (>0, baseline = 1)
 
-### equations.py - Mathematical Core
-This file implements the core mathematical equations for computing general equilibrium solutions.
+**Trade Cost Shocks:**  
+- **`df_hat[n,i,s]`** (N×N×S): Final goods trade cost shock from country i to country n in sector s (>0, diagonal = 1)
+- **`dm_hat[n,i,s]`** (N×N×S): Intermediate goods trade cost shock from country i to country n in sector s (>0, diagonal = 1)  
+- **`tilde_tau_hat[n,i,s]`** (N×N×S): Tariff shock from country i to country n in sector s (≥1, diagonal = 1)
 
-#### Core Functions
+*Note: Baseline shocks are all ones, representing no change from calibrated equilibrium.*
 
-**solve_price_and_cost()**
-Computes unit costs and price indices using vectorized operations:
-```python
-# Unit costs (Equation 7): ĉ[n,s] = ŵ[n]^β[n,s] * ∏(P̂m[n,k]^γ[n,s,k])
-c_hat = np.exp(beta * log_w_hat[:, np.newaxis] + 
-               np.einsum('nkj,nk->nj', gamma, log_Pm_hat))
+To do (not this stage): System of equations featuring the model.(equations.py)
 
-# Price indices (Equation 8): P̂[n,s] = (Σ π[n,i,s] * (ĉ[i,s] * κ̂[n,i,s])^(-θ[s]))^(-1/θ[s])
-```
-*Returns*: `(c_hat, Pf_hat, Pm_hat)`
+### 2. Real Data
+Model parameters are calibrated from real-world input-output tables and trade data, stored in compressed NumPy format (`data.npz`) for efficient loading and processing.
 
-**calc_expenditure_share()**
-Computes trade share changes using vectorized broadcasting:
-```python
-# Expenditure shares (Equation 9): π̂[i,n,s] = λ̂[n,s] * (ĉ[n,s]*d̂[i,n,s])^(-θ[s]) / P̂[i,s]^(-θ[s])
-```
-*Returns*: Trade share changes (I×N×S)
+To do (not this stage):
+- A seperate note describing the data-cleaning process to transform the raw data to the IO tables
+- A seperate note describing the formula to transform the IO tables to the model parameters
 
-**calc_X_prime()** [Numba-accelerated]
-Solves expenditure equilibrium using iterative algorithm:
-- **Income computation**: Includes wages, trade deficits, and tariff revenues
-- **Final expenditure**: `Xf_prime[n,s] = α[n,s] * I_prime[n]`
-- **Intermediate expenditure**: Uses gamma coefficients and trade linkages
-- **Convergence**: Iterates until changes < tolerance
 
-*Returns*: `(Xf_prime, Xm_prime)`
+### 3. Model Solution Engine
+The computational core solves the equilibrium under baseline/counterfactual policy scenarios using fixed-point iteration algorithms.
 
-**generate_equilibrium()**
-Main equilibrium computation orchestrating all components:
-1. Pre-computes shock-adjusted trade costs
-2. Solves prices and costs
-3. Computes trade share changes  
-4. Solves expenditure equilibrium
-5. Calculates trade balances and welfare measures
+#### Numerical Solution Process (solvers.py)
 
-*Returns*: Complete tuple of all 14 solution variables
+The model employs a **fixed-point iteration solver** to find general equilibrium where all markets clear simultaneously. The solution algorithm:
 
-#### Performance Features
-- **Vectorized operations**: Uses NumPy broadcasting and `einsum` for efficiency
-- **Numba acceleration**: Critical functions compiled for ~5-10x speedup
-- **Memory optimization**: Reduced array copying, efficient convergence checking
-- **Numerical stability**: Built-in bounds checking and tolerance handling
+**Core Algorithm:**
+1. **Initialization**: Start with initial wage guess and previous price indices
+2. **Equilibrium Calculation**: Solve for all endogenous variables given current wage vector using economic equations
+3. **Market Clearing Check**: Verify trade balance conditions through wage gradient computation
+4. **Wage Update**: Adjust wages based on trade deficit deviations from target using gradient descent
+5. **Convergence Test**: Continue until wage changes and price changes fall below tolerance thresholds
+6. **Solution Storage**: Save converged equilibrium to ModelSol object
 
-#### Mathematical Consistency
-- **Economic constraints**: Maintains all theoretical relationships from Caliendo & Parro (2015)
-- **Hat algebra**: Consistent multiplicative change framework throughout
-- **Equilibrium conditions**: Ensures market clearing and balanced trade
+**Solver Configuration:**
+- **`max_iter`**: Maximum iterations (default: 1,000,000)
+- **`tol`**: Convergence tolerance (default: 1e-6) 
+- **`vfactor`**: Wage adjustment factor (default: -0.2)
+- **`bound_eps`**: Lower bound for wages (default: 1e-6)
 
-## Legacy Documentation (equations.py detailed)
+**Convergence Monitoring**: Tracks maximum wage gradient and price index changes, with detailed iteration logging showing wage bounds, expenditure ranges, and convergence metrics.
 
-### calc_c_hat
-Function to calculate unit cost change (equation (7) of the paper).
+#### Model Output Variables (Equilibrium Solution)
 
-```math
-\hat{c}_{i}^{s} = \hat{w}_{i}^{\beta_{i}^{s}} \prod_{k=1}^{s} \left( \hat{P}_{i}^{km'} \right)^{\beta_{i}^{sk}}
-```
+The solution represents the new economic equilibrium after applying policy shocks. All variables capture changes relative to the baseline calibrated economy.
 
-### calc_Pu_hat
-Function to calculate price index change (equation (8) of the paper).
-It requires "usage" as an input (usage = "f" for final goods, = "m" for intermediate inputs)
+**Price and Cost Variables:**
+- **`w_hat[n]`** (N): Wage change in country n relative to baseline equilibrium
+- **`c_hat[n,s]`** (N×S): Unit cost change in sector s of country n (incorporates labor and intermediate input costs)
+- **`Pf_hat[n,s]`** (N×S): Final goods price index change in sector s of country n
+- **`Pm_hat[n,s]`** (N×S): Intermediate goods price index change in sector s of country n  
+- **`p_index[n]`** (N): Consumer price index change in country n (overall price level)
 
-```math
-\hat{P}_{n}^{su} = \left( \sum_{h=1}^{N} \pi_{nh0}^{su} \hat{\lambda}_{h}^{s} \left( \hat{c}_{h}^{s} \hat{d}_{nh}^{su} \right)^{- \theta^{s}} \right)^{- \frac{1}{\theta^{s}}}
-```
+**Trade Flow Variables:**
+- **`pif_hat[n,i,s]`** (N×N×S): Final goods trade share change from exporter i to importer n in sector s
+- **`pim_hat[n,i,s]`** (N×N×S): Intermediate goods trade share change from exporter i to importer n in sector s
+- **`pif_prime[n,i,s]`** (N×N×S): New final goods trade share from exporter i to importer n in sector s
+- **`pim_prime[n,i,s]`** (N×N×S): New intermediate goods trade share from exporter i to importer n in sector s
 
-### calc_pi_hat
-Function to calculate expenditure share change (equation (9) of the paper).
-It requires "usage" as an input (usage = "f" for final goods, = "m" for intermediate inputs)
+**Expenditure and Production Variables:**
+- **`Xf_prime[n,s]`** (N×S): New final goods expenditure in sector s by country n
+- **`Xm_prime[n,s]`** (N×S): New intermediate goods expenditure in sector s by country n
+- **`X_prime[n,s]`** (N×S): New total expenditure in sector s by country n
+- **`Xf_prod_prime[n,s]`** (N×S): New final goods production value in sector s of country n
+- **`Xm_prod_prime[n,s]`** (N×S): New intermediate goods production value in sector s of country n  
+- **`X_prod_prime[n,s]`** (N×S): New total production value in sector s of country n
+- **`output_prime[n,s]`** (N×S): New output demand in sector s of country n
 
-```math
-\hat{\pi}_{ni}^{su} = \frac{\hat{\lambda}_{i}^{s} \left( \hat{c}_{h}^{s} \hat{d}_{nh}^{su} \right)^{- \theta^{s}}}{\left( \hat{P}_{n}^{su} \right)^{- \theta^{s}}}
-```
+**Welfare and Income Variables:**
+- **`real_w_hat[n]`** (N): Real wage change in country n (nominal wage deflated by consumer price index)
+- **`I_prime[n]`** (N): New nominal income in country n
+- **`real_I_prime[n]`** (N): New real income in country n (welfare measure)
+- **`D_prime[n]`** (N): New trade deficit in country n
 
-### calc_Xf_prime
-Function to calculate expenditure to the final goods (equation (10) of the paper).
+**Network Linkage Variables:**
+- **`sector_links[n,s,i,k]`** (N×S×N×S): Import linkages showing how country n's sector s depends on inputs from country i's sector k
+- **`country_links[n,i]`** (N×N): Aggregate import linkages between countries n and i across all sectors
 
-```math
-X_{n}^{sf'} = \alpha_{n}^{s} \left[ \hat{w}_{n} w_{n0} L_{n0} + \sum_{s=1}^S \sum_{i=1}^N \frac{\tau_{ni}^{s'}}{1 + \tau_{ni}^{s'}} \left( \pi_{ni}^{sf'} X_{n}^{sf'} + \pi_{ni}^{sm'} X_{n}^{sm'} \right) + TD_{n}^{'} \right]
-```
+*Note: Variables with "_hat" suffix represent percentage changes (new/baseline), while "_prime" suffix represents new absolute levels after policy shocks.*
 
-### calc_Xm_prime
-Function to calculate expenditure to the intermediate inputs (equation (11) of the paper).
+### 4. Interactive Visualization Platform
+A Streamlit-based web application provides real-time analysis capabilities, allowing users to configure custom tariff scenarios, visualize results across multiple dimensions, and export data for further research.
 
-```math
-X_{n}^{sm'} = \sum_{k=1}^S \beta_{n}^{ks} \left( \sum_{i=1}^{N} \frac{\pi_{in}^{kf'}}{1 + \tau_{in}^{kf'}} X_{i}^{kf'} + \sum_{i=1}^N \frac{\pi_{in}^{km'}}{1 + \tau_{in}^{km'}} X_{i}^{km'} \right)
-```
+#### **`data.npz`** - Model Dataset
+**Purpose**: Calibrated parameters from input-output tables
 
-### calc_td_prime
-Function to calculate trade deficit after the shock (equation (12) of the paper).
+### ⚙️ Model Computation Layer
 
-```math
-TD_{n}^{'} = \sum_{s=1}^S \sum_{i=1}^N \left( \underbrace{\frac{\pi_{ni}^{sf'} X_{nt}^{sf'} + \pi_{ni}^{sm'} X_{nt}^{sm'}}{1 + \tau_{ni}^{s'}}}_{\text{Import}} - \underbrace{\frac{\pi_{in}^{sf'} X_{i}^{sf'} + \pi_{in}^{sm'} X_{i}^{sm'}}{1 + \tau_{in}^{s'}}}_{\text{Export}} \right)
-```
+The computational engine handles economic modeling through specialized mathematical algorithms:
 
-## solvers.py
-This file contains some functions to solve the model using loops.
+#### **`equations.py`** - Mathematical Framework
+**Purpose**: Core economic equations and equilibrium computation
 
-### solve_price_and_cost
-Function to solve `c_hat` and `Pm_hat` (inner loop). For any given value of $\{ \hat{w}_{n} \}$, it calculates $\{ \hat{c}_{n}^{s} \}$ and $\{ \hat{P}_{n}^{s,m} \}$ that simultaneously satisfy equations (7) and (8). It simply uses loops.
+**Key Functions**:
+- `generate_equilibrium()` - Main equilibrium calculation
+- `solve_price_and_cost()` - Unit costs and price indices computation
+- `calc_expenditure_share()` - Trade share calculations
+- `calc_X_prime()` - Expenditure equilibrium solving
+- `calc_sector_links()` - Compute import linkage matrices
+- `calc_c_hat()` - Unit cost changes
+- `calc_Pu_hat()` - Price index changes
+- `calc_pi_hat()` - Expenditure share changes
+- `calc_Xf_prime()` - Final expenditure calculations
+- `calc_Xm_prime()` - Intermediate expenditure calculations
+- `calc_td_prime()` - Trade deficit calculations
 
-### solve_X_prime
-Function to solve $\{ X_{n}^{s, f '} \}$ and $\{ X_{n}^{s, m '} \}$. For any given value of $\{ \hat{w}_n \}$, $\{ \hat{\pi}_{ni}^{s, f} \}$, $\{ \hat{\pi}_{ni}^{s, m} \}$, $TD_{n}^{'}$. Takes the initial guess of $\{ X_{n}^{s, f '} \}$ and $\{ X_{n}^{s, m '} \}$ and solve by using loops.
+#### **`solvers.py`** - Numerical Algorithms
+**Purpose**: Fixed-point iteration solver with convergence monitoring
 
-### <span style="color: grey; ">solve_equilibrium</span>
-Function to solve the entire equilibrium using loops. It guesses $\{ \hat{w}_n \}$ and calculate endogenous variables and the difference of world-GDP-normalized trade deficit
+**Key Functions**:
+- `ModelSolver` class - Main solver with configurable parameters
+- `solve()` - Execute model solving with convergence monitoring
+- `_check_convergence()` - Monitor solution convergence
+- `_update_wages()` - Wage adjustment iterations
 
-```math
-ZW2_n = \frac{TD_{n}^{'}}{\sum_{i=1}^{N} \hat{w}_{n} w_{n0} L_{n0}} - \frac{TD_{n0}}{\sum_{i=1}^{N} w_{n0} L_{n0}},
-```
+#### **`API/model_pipeline.py`** - Model Solving Pipeline
+**Purpose**: Direct counterfactual solving with hash-based caching
 
-and updates the guess $\{ \hat{w}_n \}$ by
+**Key Functions**:
+- `solve_counterfactual()` - Main solving function
+- `get_counterfactual_results()` - Retrieve cached solutions
+- `get_metadata_cached()` - Fast country/sector name lookup
+- `clear_counterfactual_cache()` - Cache management
+- `list_cached_scenarios()` - View cached scenarios
 
-```math
-\hat{w}_{n}^{\text{new}} = \hat{w}_{n}^{\text{old}} \exp \left(-\frac{ZW2_n}{10} \right).
-```
+### 🎯 Streamlit Application Layer
 
-It doesn't work for some reason, and is no longer used.
+The user-facing layer handles interaction, visualization, and data export through three core scripts:
 
-## equations_matrix.py
-This file contains the function to solve $X_f$ and $X_m$ by usin linear algebgra.
+#### **`API/app.py`** - Main Streamlit Interface
+**Purpose**: Primary user interface and application orchestration
 
-### calc_X
-Function to solve $\{ X_{n}^{s, f '} \}$ and $\{ X_{n}^{s, m '} \}$ by simultaneously solving equations (10) and (11). Since they are linear equations, it should be faster than using loop method in solve_X_prime in solvers.py and solve_X_prime can be replaced with it.
+**Key Functions**:
+- `main()` - Application entry point and UI coordination
+- `load_baseline_model()` - Loads pre-solved baseline from pickle file
+- `create_counterfactual_ui()` - Dynamic tariff configuration interface
+- `generate_unified_tariff_data()` - Handles multiple tariff input modes
+- `solve_counterfactual_model()` - Coordinates model solving and caching
 
-## optimization.py
-This file defines the objective function for the mathematical optimization, which will be used to solve the equilibrium.
+**Features**: Model type selection, four tariff configuration modes, session state management, and cache control.
 
-### reconstruct_w_hat
-Function to reconstruct a $N$-length vector of $\hat{w}_{n}$ from the $(N-1)$-length vector without the numeraire country.
+#### **`API/visualization.py`** - Interactive Visualization Engine
+**Purpose**: Simplified visualization with performance optimization
 
-### objective_w_hat_reduced
-Function to calculate the normalized trade deficit $ZW2_n$ for countries other than the numeraire country and returns the max-absolute value of the $\{ZW2_n\}$ vector. Used as the objective function for solving equilibrium.
+**Key Functions**:
+- `visualize_single_model()` - Display individual model results
+- `visualize_comparison()` - Show percentage changes between models
 
-## functions.py
-This file defines some utility functions.
+**Capabilities**: Multi-dimensional variable support, performance caching, interactive controls for country/sector selection, and responsive design with adjustable layouts.
 
-### generate_rand_params
-Function to randomly generate parameters. Receives the number of countries and sectors and returns the ModelParams object.
+#### **`API/download_excel.py`** - Data Export Module
+**Purpose**: Excel and CSV data export functionality
 
-### <span style="color: grey; ">generate_simple_params</span>
-Function to construct ModelParams object with the fixed value of parameter sets. $N=2$ and $J=1$. It was used to compare the model's analytical solution and the output of Python programs here.
+**Key Functions**:
+- `create_excel_locally()` - Generate Excel files with variable data
+- `create_csv_locally()` - Create CSV network analysis files
+- `show_variable_download_section()` - UI for download options
+- `flatten_sector_links_for_viz()` - Convert complex linkages to exportable format
 
-## toy_model.py
-This file solves the model for randomly generated parameters.
+**Formats**: Excel files with proper indexing, CSV network data files, and percentage change comparisons.
 
-## main.py
-This file solves the equilibrium from the parameters read from the original data.
+**Contents**: Trade data with bilateral flows, input-output coefficients between sectors, trade elasticity parameters, and economic aggregates including value added and expenditures.

@@ -2,7 +2,7 @@
 Simplified Model Pipeline: Direct counterfactual solving with hash-based caching
 ===============================================================================
 
-Ultra-simplified approach:
+Core functions:
 1. solve_counterfactual() - directly solve and cache  
 2. get_counterfactual_results() - directly retrieve from cache
 3. Hash-based caching for performance
@@ -13,7 +13,6 @@ No unnecessary wrapper classes or complex abstractions.
 import numpy as np
 from typing import Dict, List, Optional, Tuple
 from copy import deepcopy
-import streamlit as st
 import hashlib
 import sys
 from pathlib import Path
@@ -109,7 +108,12 @@ def solve_counterfactual(baseline_params: ModelParams,
     return cache_key
 
 
-def get_counterfactual_results(cache_key: str) -> Tuple[Optional[ModelSol], Optional[ModelParams]]:
+def get_tariff_cache_key(tariff_data: dict) -> str:
+    """Get cache key for tariff configuration without solving."""
+    return _hash_tariff_structure(tariff_data)
+
+
+def get_counterfactual_results(cache_key: str) -> Tuple[Optional[ModelSol], Optional[ModelParams], str]:
     """
     Retrieve counterfactual results by cache key.
     
@@ -117,11 +121,11 @@ def get_counterfactual_results(cache_key: str) -> Tuple[Optional[ModelSol], Opti
         cache_key: Hash key returned by solve_counterfactual()
         
     Returns:
-        Tuple[ModelSol, ModelParams]: Solution and parameters, or (None, None) if not found
+        Tuple[ModelSol, ModelParams, str]: Solution, parameters, and cache_key, or (None, None, cache_key) if not found
     """
     solution = _solution_cache.get(cache_key)
     params = _params_cache.get(cache_key)
-    return solution, params
+    return solution, params, cache_key
 
 
 def clear_counterfactual_cache() -> None:
@@ -134,77 +138,6 @@ def clear_counterfactual_cache() -> None:
 def list_cached_scenarios() -> List[str]:
     """List all cached scenario keys."""
     return list(_solution_cache.keys())
-
-
-# ==============================================================================
-# BACKWARD COMPATIBILITY FUNCTIONS
-# Maintain existing interfaces without unnecessary classes
-# ==============================================================================
-
-class ModelPipeline:
-    """
-    Minimal backward compatibility wrapper.
-    This exists only to maintain existing import/usage patterns.
-    """
-    
-    def __init__(self):
-        self._baseline_params: Optional[ModelParams] = None
-    
-    def initialize_with_baseline_params(self, baseline_params: ModelParams) -> None:
-        """Store baseline parameters for later use."""
-        self._baseline_params = baseline_params
-    
-    def solve_counterfactual(self, 
-                           importers: List[str], 
-                           exporters: List[str], 
-                           sectors: List[str], 
-                           tariff_data: dict) -> str:
-        """Wrapper around the direct solve_counterfactual function."""
-        if self._baseline_params is None:
-            raise RuntimeError("Pipeline must be initialized with baseline parameters first")
-        
-        return solve_counterfactual(self._baseline_params, importers, exporters, sectors, tariff_data)
-    
-    def get_counterfactual_results(self, key: str) -> Tuple[Optional[ModelSol], Optional[ModelParams]]:
-        """Wrapper around the direct get_counterfactual_results function."""
-        return get_counterfactual_results(key)
-    
-    def list_solved_counterfactuals(self) -> List[str]:
-        """Wrapper around list_cached_scenarios."""
-        return list_cached_scenarios()
-    
-    def clear_counterfactuals(self) -> None:
-        """Wrapper around clear_counterfactual_cache."""
-        clear_counterfactual_cache()
-
-
-@st.cache_resource
-def get_model_pipeline() -> ModelPipeline:
-    """
-    Backward compatibility function.
-    Returns minimal wrapper for existing code.
-    """
-    return ModelPipeline()
-
-
-def solve_counterfactual_cached(importers: List[str], 
-                              exporters: List[str], 
-                              sectors: List[str], 
-                              tariff_data: dict,
-                              baseline_params: ModelParams) -> Tuple[Tuple[ModelSol, ModelParams], str]:
-    """
-    Backward compatibility function for existing usage patterns.
-    
-    Returns:
-        Tuple[Tuple[ModelSol, ModelParams], str]: ((solution, params), cache_key)
-    """
-    cache_key = solve_counterfactual(baseline_params, importers, exporters, sectors, tariff_data)
-    solution, params = get_counterfactual_results(cache_key)
-    
-    if solution is None or params is None:
-        raise RuntimeError("Counterfactual solving failed")
-    
-    return (solution, params), cache_key
 
 
 def get_metadata_cached() -> Tuple[List[str], List[str], int, int]:

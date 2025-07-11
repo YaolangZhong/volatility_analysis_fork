@@ -4,13 +4,14 @@ Excel and CSV Download Module
 
 This module handles all data export functionality for the Streamlit app,
 including Excel files with variable data and CSV network data files.
+Works in local mode for Streamlit Cloud deployment.
 """
 
 import io
 import zipfile
 import numpy as np
 import pandas as pd
-from typing import Optional
+from typing import Optional, Tuple, List
 from datetime import datetime
 import streamlit as st
 import sys
@@ -23,10 +24,80 @@ if str(parent_dir) not in sys.path:
     sys.path.insert(0, str(parent_dir))
 
 from models import ModelSol, ModelParams
+import pickle
+
+
+@st.cache_data
+def load_network_data(network_path: str = "baseline_model_network.pkl") -> dict:
+    """Load network linkage data on-demand for downloads."""
+    try:
+        with open(network_path, 'rb') as f:
+            return pickle.load(f)
+    except FileNotFoundError:
+        # Fallback: return empty data if network file doesn't exist
+        return {'sector_links': None, 'country_links': None}
+
+
+def ensure_network_data(sol: ModelSol, params: ModelParams) -> ModelSol:
+    """Ensure ModelSol has network data loaded for downloads."""
+    # Check if we have placeholder data (indicating split model)
+    if (hasattr(sol, 'sector_links') and sol.sector_links.shape == (1, 1, 1, 1)) or \
+       (hasattr(sol, 'country_links') and sol.country_links.shape == (1, 1)):
+        
+        # Load network data on-demand
+        with st.spinner("🔄 Loading network data for download..."):
+            network_data = load_network_data()
+            
+            if network_data['sector_links'] is not None:
+                # Create a copy of the solution with network data
+                import copy
+                sol_with_network = copy.copy(sol)
+                sol_with_network.sector_links = network_data['sector_links']
+                sol_with_network.country_links = network_data['country_links']
+                return sol_with_network
+            else:
+                st.warning("⚠️ Network data not available. Some download features may be limited.")
+                return sol
+    
+    # Already has network data or not a split model
+    return sol
+
+
+def flatten_sector_links_for_viz(sector_links: np.ndarray, params: ModelParams) -> Tuple[np.ndarray, List[str], List[str]]:
+    """Flatten sector_links from 4D (N, S, N, S) to 2D (NS, NS) for visualization."""
+    N, S, _, _ = sector_links.shape
+    NS = N * S
+    
+    # Create labels using actual country and sector names from params
+    row_labels = []  # ik pairs: importer_country + output_sector
+    col_labels = []  # ns pairs: exporter_country + input_sector
+    
+    # Row labels: importer_country + output_sector (ik pairs)
+    for i in range(N):
+        for k in range(S):
+            country_name = params.country_list[i] if i < len(params.country_list) else f"Country_{i}"
+            sector_name = params.sector_list[k] if k < len(params.sector_list) else f"Sector_{k}"
+            row_labels.append(f"{country_name}_{sector_name}")
+    
+    # Column labels: exporter_country + input_sector (ns pairs)
+    for n in range(N): 
+        for s in range(S):
+            country_name = params.country_list[n] if n < len(params.country_list) else f"Country_{n}"
+            sector_name = params.sector_list[s] if s < len(params.sector_list) else f"Sector_{s}"
+            col_labels.append(f"{country_name}_{sector_name}")
+    
+    # Reshape 4D (N, S, N, S) to 2D (NS, NS)
+    flattened = sector_links.reshape(NS, NS)
+    return flattened, row_labels, col_labels
 
 
 def create_csv_locally(sol: ModelSol, params: ModelParams, baseline_sol: Optional[ModelSol] = None) -> io.BytesIO:
     """Create CSV files for the 4 specialized network analysis sheets."""
+    # Ensure network data is loaded for CSV downloads
+    sol = ensure_network_data(sol, params)
+    if baseline_sol is not None:
+        baseline_sol = ensure_network_data(baseline_sol, params)
+    
     zip_buffer = io.BytesIO()
     
     # Calculate percentage change if baseline is provided
@@ -131,6 +202,11 @@ def create_csv_locally(sol: ModelSol, params: ModelParams, baseline_sol: Optiona
 
 def create_excel_locally(sol: ModelSol, params: ModelParams, variable_name: Optional[str] = None, baseline_sol: Optional[ModelSol] = None) -> io.BytesIO:
     """Create Excel file locally."""
+    # Ensure network data is loaded for Excel downloads
+    sol = ensure_network_data(sol, params)
+    if baseline_sol is not None:
+        baseline_sol = ensure_network_data(baseline_sol, params)
+    
     excel_buffer = io.BytesIO()
     
     def get_percentage_change_data(attr_value, attr_name):
@@ -162,7 +238,6 @@ def create_excel_locally(sol: ModelSol, params: ModelParams, variable_name: Opti
             return pd.DataFrame(rows)
         elif data_to_use.ndim == 4 and attr_name == 'sector_links':
             # Special handling for sector_links - flatten to 2D
-            from visualization import flatten_sector_links_for_viz
             flattened_data, row_labels, col_labels = flatten_sector_links_for_viz(data_to_use, params)
             return pd.DataFrame(flattened_data, index=pd.Index(row_labels), columns=pd.Index(col_labels))
         elif attr_name == 'country_links':
@@ -201,78 +276,60 @@ def create_excel_locally(sol: ModelSol, params: ModelParams, variable_name: Opti
 
 def create_excel_download_button(sol: ModelSol, params: ModelParams, scenario_key: Optional[str], 
                                 variable_name: Optional[str] = None, unique_key: str = "", 
-                                baseline_sol: Optional[ModelSol] = None, api_client=None, api_available=False):
+                                baseline_sol: Optional[ModelSol] = None):
     """Create download button for Excel export."""
     try:
-        if api_client is not None and api_available and scenario_key:
-            # Use API download
-            if variable_name:
-                excel_data = api_client.download_variable_excel(scenario_key, variable_name)
-                filename = f"{scenario_key}_{variable_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        # Local Excel generation
+        excel_buffer = create_excel_locally(sol, params, variable_name, baseline_sol)
+        
+        if variable_name:
+            filename = f"{variable_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            label = f"📥 Download {variable_name} (Excel)"
+        else:
+            if baseline_sol is not None:
+                filename = f"percentage_changes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+                label = "📥 Download Percentage Changes (Excel)"
             else:
-                excel_data = api_client.download_all_variables_excel(scenario_key)
-                filename = f"{scenario_key}_all_variables_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-            
+                filename = f"all_variables_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+                label = "📥 Download All Variables (Excel)"
+        
+        # Create download buttons side by side
+        col1, col2 = st.columns(2)
+        
+        with col1:
             st.download_button(
-                label=f"📥 Download {variable_name or 'All Variables'} (Excel)",
-                data=excel_data,
+                label=label,
+                data=excel_buffer.getvalue(),
                 file_name=filename,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key=f"download_btn_{unique_key}_{variable_name or 'all'}"
+                key=f"download_btn_excel_{unique_key}_{variable_name or 'all'}"
             )
-        else:
-            # Local Excel generation
-            excel_buffer = create_excel_locally(sol, params, variable_name, baseline_sol)
-            
-            if variable_name:
-                filename = f"{variable_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-                label = f"📥 Download {variable_name} (Excel)"
-            else:
+        
+        with col2:
+            # Network data download (only for all variables, not single variable)
+            if variable_name is None:
+                csv_buffer = create_csv_locally(sol, params, baseline_sol)
+                
                 if baseline_sol is not None:
-                    filename = f"percentage_changes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-                    label = "📥 Download Percentage Changes (Excel)"
+                    network_filename = f"network_data_percentage_changes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+                    network_label = "📊 Download Network Data (4 CSV files)"
                 else:
-                    filename = f"all_variables_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-                    label = "📥 Download All Variables (Excel)"
-            
-            # Create download buttons side by side
-            col1, col2 = st.columns(2)
-            
-            with col1:
+                    network_filename = f"network_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+                    network_label = "📊 Download Network Data (4 CSV files)"
+                
                 st.download_button(
-                    label=label,
-                    data=excel_buffer.getvalue(),
-                    file_name=filename,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key=f"download_btn_excel_{unique_key}_{variable_name or 'all'}"
+                    label=network_label,
+                    data=csv_buffer.getvalue(),
+                    file_name=network_filename,
+                    mime="application/zip",
+                    key=f"download_btn_network_{unique_key}_{variable_name or 'all'}"
                 )
-            
-            with col2:
-                # Network data download (only for all variables, not single variable)
-                if variable_name is None:
-                    csv_buffer = create_csv_locally(sol, params, baseline_sol)
-                    
-                    if baseline_sol is not None:
-                        network_filename = f"network_data_percentage_changes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
-                        network_label = "📊 Download Network Data (4 CSV files)"
-                    else:
-                        network_filename = f"network_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
-                        network_label = "📊 Download Network Data (4 CSV files)"
-                    
-                    st.download_button(
-                        label=network_label,
-                        data=csv_buffer.getvalue(),
-                        file_name=network_filename,
-                        mime="application/zip",
-                        key=f"download_btn_network_{unique_key}_{variable_name or 'all'}"
-                    )
     except Exception as e:
         st.error(f"Failed to create download: {e}")
 
 
 def show_variable_download_section(sol: ModelSol, params: ModelParams, scenario_key: Optional[str] = None, 
-                                 unique_key: str = "", baseline_sol: Optional[ModelSol] = None, 
-                                 api_client=None, api_available=False):
+                                 unique_key: str = "", baseline_sol: Optional[ModelSol] = None):
     """Show variable download options."""
     st.markdown("### Download Options")
     if baseline_sol is not None:
@@ -282,4 +339,4 @@ def show_variable_download_section(sol: ModelSol, params: ModelParams, scenario_
         st.info("📊 **Excel**: All variables in separate sheets (includes sector_links, country_links and trade flows)")  
         st.info("📊 **Network Data**: ZIP file with 4 CSV files for network analysis (country/sector nodes & edges)")
     
-    create_excel_download_button(sol, params, scenario_key, None, unique_key, baseline_sol, api_client, api_available) 
+    create_excel_download_button(sol, params, scenario_key, None, unique_key, baseline_sol) 
